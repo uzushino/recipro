@@ -1,0 +1,13 @@
+[package]
+name = "recipro_app"
+version = "0.1.0"
+authors = ["uzushino <torattoria.mamiya@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+recipro_engine = { path = "../engine" }
+cc = "1.0"
+
+[[bin]] 
+name = "recipro"
+path = "src/main.rs"

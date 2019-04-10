@@ -1,0 +1,16 @@
+## rust
+/target
+**/*.rs.bk
+
+## v8
+/v8
+_gclient_v8*
+/.cipd
+/.gclient*
+/depot_tools
+/out
+/v8.pc
+
+## misc
+.vscode
+.python-version
