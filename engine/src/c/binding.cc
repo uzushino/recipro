@@ -13,6 +13,24 @@ const char* get_v8_version()
   return v8::V8::GetVersion();
 }
 
+static std::unique_ptr<v8::Platform> platform;
+
+void init() {
+  if (platform.get() == nullptr) {
+    std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
+    v8::V8::InitializePlatform(platform.get()); 
+    v8::V8::Initialize();
+  }
+}
+
+void dispose() {
+  v8::V8::Dispose();
+}
+
+void shutdown_platform() {
+  v8::V8::ShutdownPlatform();
+}
+
 /*
 void hello() {
   std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
