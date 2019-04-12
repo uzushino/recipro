@@ -31,6 +31,42 @@ void shutdown_platform() {
   v8::V8::ShutdownPlatform();
 }
 
+class Isolate {
+public:
+  Isolate() : isolate_(nullptr), allocator_(nullptr) { }
+  ~Isolate() {
+    Dispose();
+  }
+
+  void New();
+  void Dispose();
+
+private:
+  v8::Isolate* isolate_;
+  v8::ArrayBuffer::Allocator* allocator_;
+};
+
+void Isolate::New() {
+  allocator_ = 
+    v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+  
+  v8::Isolate::CreateParams create_params;
+  create_params.array_buffer_allocator = allocator_;
+
+  isolate_ = v8::Isolate::New(create_params);
+}
+
+void Isolate::Dispose() {
+  if (isolate_) {
+    isolate_ = NULL;
+  }
+
+  if (allocator_) {
+    delete allocator_;
+    allocator_ = NULL;
+  }
+}
+
 /*
 void hello() {
   std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
