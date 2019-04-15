@@ -15,22 +15,6 @@ const char* get_v8_version()
 
 static std::unique_ptr<v8::Platform> platform;
 
-void init() {
-  if (platform.get() == nullptr) {
-    std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
-    v8::V8::InitializePlatform(platform.get()); 
-    v8::V8::Initialize();
-  }
-}
-
-void dispose() {
-  v8::V8::Dispose();
-}
-
-void shutdown_platform() {
-  v8::V8::ShutdownPlatform();
-}
-
 class Isolate {
 public:
   Isolate() : isolate_(nullptr), allocator_(nullptr) { }
@@ -40,11 +24,37 @@ public:
 
   void New();
   void Dispose();
+  void JsEval(const char *);
 
 private:
   v8::Isolate* isolate_;
   v8::ArrayBuffer::Allocator* allocator_;
 };
+
+void v8_init() {
+  if (platform.get() == nullptr) {
+    std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
+    v8::V8::InitializePlatform(platform.get()); 
+    v8::V8::Initialize();
+  }
+}
+
+void v8_dispose() {
+  v8::V8::Dispose();
+}
+
+void v8_shutdown_platform() {
+  v8::V8::ShutdownPlatform();
+}
+
+void js_eval() {
+  Isolate isolate = Isolate();
+
+  isolate.New();
+  //isolate.JsEval("Hello world.");
+
+  return;
+}
 
 void Isolate::New() {
   allocator_ = 
@@ -65,6 +75,26 @@ void Isolate::Dispose() {
     delete allocator_;
     allocator_ = NULL;
   }
+}
+
+void Isolate::JsEval(const char *javascript) {
+  v8::Isolate::Scope isolate_scope(isolate_);
+  v8::HandleScope handle_scope(isolate_);
+  v8::Local<v8::Context> context = v8::Context::New(isolate_);
+  v8::Context::Scope context_scope(context);
+
+  v8::Local<v8::String> source =
+      v8::String::NewFromUtf8(
+        isolate_, 
+        "Hello",
+        v8::NewStringType::kNormal
+      ).ToLocalChecked(); 
+  
+  v8::Local<v8::Script> script = v8::Script::Compile(context, source).ToLocalChecked();
+  v8::Local<v8::Value> result = script->Run(context).ToLocalChecked();
+  v8::String::Utf8Value utf8(isolate_, result);
+
+  printf("%s\n", *utf8);
 }
 
 /*

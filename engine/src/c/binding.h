@@ -6,13 +6,11 @@ extern "C" {
 
   const char* get_v8_version();
 
-  void init_platform();
+  void v8_init() ;
+  void v8_dispose() ;
+  void v8_shutdown_platform() ;
 
-  void init() ;
-
-  void dispose() ;
-
-  void shutdown_platform() ;
+  void js_eval();
 
 #ifdef __cplusplus
 }
