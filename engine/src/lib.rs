@@ -1,8 +1,8 @@
 extern crate libc;
 
 use std::borrow::Cow;
+use std::ffi::{ CStr, CString };
 use std::os::raw::c_char;
-use std::ffi::CStr;
 
 #[link(name = "binding", kind = "static")]
 extern "C" {
@@ -12,7 +12,7 @@ extern "C" {
 
     fn get_v8_version() -> *const c_char;
 
-    fn js_eval(script: *const i8);
+    fn js_eval(script: *const c_char);
 }
 
 pub fn init() {
@@ -35,9 +35,10 @@ pub fn v8_version() -> Cow<'static, str> {
 }
 
 pub fn eval() {
-    let script = std::ffi::CString::new("'Hello from rust!'").unwrap();
+    let script = CString::new("'Hello from rust!'")
+        .unwrap();
 
     unsafe { 
-        js_eval(script.as_ptr() as *const i8); 
+        js_eval(script.as_ptr()); 
     }
 }
