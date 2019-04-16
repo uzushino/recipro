@@ -10,7 +10,7 @@ extern "C" {
   void v8_dispose() ;
   void v8_shutdown_platform() ;
 
-  void js_eval();
+  void js_eval(const char *);
 
 #ifdef __cplusplus
 }

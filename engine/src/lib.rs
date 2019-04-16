@@ -12,7 +12,7 @@ extern "C" {
 
     fn get_v8_version() -> *const c_char;
 
-    fn js_eval();
+    fn js_eval(script: *const i8);
 }
 
 pub fn init() {
@@ -35,7 +35,9 @@ pub fn v8_version() -> Cow<'static, str> {
 }
 
 pub fn eval() {
-    unsafe {
-        js_eval();
+    let script = std::ffi::CString::new("'Hello from rust!'").unwrap();
+
+    unsafe { 
+        js_eval(script.as_ptr() as *const i8); 
     }
 }

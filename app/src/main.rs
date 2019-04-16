@@ -5,7 +5,9 @@ fn main() {
   println!("version: {}", version);
 
   recipro_engine::init();
+ 
   recipro_engine::eval();
+  
+  recipro_engine::dispose();
   recipro_engine::shutdown_platform();
-  recipro_engine::dispose()
 }

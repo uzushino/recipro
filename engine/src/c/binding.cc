@@ -33,7 +33,8 @@ private:
 
 void v8_init() {
   if (platform.get() == nullptr) {
-    std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
+    platform = v8::platform::NewDefaultPlatform();
+
     v8::V8::InitializePlatform(platform.get()); 
     v8::V8::Initialize();
   }
@@ -47,11 +48,11 @@ void v8_shutdown_platform() {
   v8::V8::ShutdownPlatform();
 }
 
-void js_eval() {
+void js_eval(const char* script) {
   Isolate isolate = Isolate();
 
   isolate.New();
-  //isolate.JsEval("Hello world.");
+  isolate.JsEval(script);
 
   return;
 }
@@ -86,7 +87,7 @@ void Isolate::JsEval(const char *javascript) {
   v8::Local<v8::String> source =
       v8::String::NewFromUtf8(
         isolate_, 
-        "Hello",
+        javascript,
         v8::NewStringType::kNormal
       ).ToLocalChecked(); 
   
