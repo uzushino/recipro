@@ -24,11 +24,12 @@ public:
 
   void New();
   void Dispose();
-  void JsEval(const char *);
+  bool JsEval(const char *, std::string&);
 
 private:
   v8::Isolate* isolate_;
   v8::ArrayBuffer::Allocator* allocator_;
+  v8::Persistent<v8::Context> context_;
 };
 
 void v8_init() {
@@ -52,7 +53,13 @@ void js_eval(const char* script) {
   Isolate isolate = Isolate();
 
   isolate.New();
-  isolate.JsEval(script);
+
+  std::string str;
+  isolate.JsEval(script, str);
+
+  printf("%s\n", str.c_str());
+
+  isolate.Dispose();
 
   return;
 }
@@ -65,10 +72,23 @@ void Isolate::New() {
   create_params.array_buffer_allocator = allocator_;
 
   isolate_ = v8::Isolate::New(create_params);
+
+  v8::Isolate::Scope isolate_scope(isolate_);
+  {
+    v8::HandleScope handle_scope(isolate_);
+
+    auto context = v8::Context::New(
+      isolate_, 
+      nullptr, 
+      v8::MaybeLocal<v8::ObjectTemplate>());
+
+    context_.Reset(isolate_, context);
+  }
 }
 
 void Isolate::Dispose() {
   if (isolate_) {
+    isolate_->Dispose();
     isolate_ = NULL;
   }
 
@@ -78,69 +98,32 @@ void Isolate::Dispose() {
   }
 }
 
-void Isolate::JsEval(const char *javascript) {
+bool Isolate::JsEval(const char *javascript, std::string& value) {
+
   v8::Isolate::Scope isolate_scope(isolate_);
   v8::HandleScope handle_scope(isolate_);
-  v8::Local<v8::Context> context = v8::Context::New(isolate_);
+  
+  auto context = context_.Get(isolate_);
   v8::Context::Scope context_scope(context);
 
-  v8::Local<v8::String> source =
+  auto source =
       v8::String::NewFromUtf8(
         isolate_, 
         javascript,
         v8::NewStringType::kNormal
       ).ToLocalChecked(); 
-  
-  v8::Local<v8::Script> script = v8::Script::Compile(context, source).ToLocalChecked();
-  v8::Local<v8::Value> result = script->Run(context).ToLocalChecked();
-  v8::String::Utf8Value utf8(isolate_, result);
 
-  printf("%s\n", *utf8);
-}
+  auto script = v8::Script::Compile(context, source).ToLocalChecked();
+  auto result = script->Run(context);
 
-/*
-void hello() {
-  std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
-  v8::V8::InitializePlatform(platform.get());
-  v8::V8::Initialize();
-
-  v8::Isolate::CreateParams create_params;
-
-  create_params.array_buffer_allocator =
-      v8::ArrayBuffer::Allocator::NewDefaultAllocator();
-
-  v8::Isolate* isolate = v8::Isolate::New(create_params);
-
-  {
-    v8::Isolate::Scope isolate_scope(isolate);
-    v8::HandleScope handle_scope(isolate);
-    v8::Local<v8::Context> context = v8::Context::New(isolate);
-    v8::Context::Scope context_scope(context);
-
-    v8::Local<v8::String> source =
-        v8::String::NewFromUtf8(
-          isolate, 
-          "'Hello' + ', World! From Javascript.'",
-          v8::NewStringType::kNormal
-        ).ToLocalChecked();
-
-    v8::Local<v8::Script> script =
-        v8::Script::Compile(context, source).ToLocalChecked();
-
-    v8::Local<v8::Value> result = script->Run(context).ToLocalChecked();
-
-    v8::String::Utf8Value utf8(isolate, result);
-
-    printf("%s\n", *utf8);
+  if (result.IsEmpty()) {
+    return false;
   }
 
-  isolate->Dispose();
+  auto ret = result.ToLocalChecked();
+  v8::String::Utf8Value utf8(isolate_, ret);
 
-  v8::V8::Dispose();
-  v8::V8::ShutdownPlatform();
+  value = *utf8;
 
-  delete create_params.array_buffer_allocator;
-
-  return ;
+  return true;
 }
-*/
