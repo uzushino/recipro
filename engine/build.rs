@@ -12,6 +12,8 @@ fn main() {
     .warnings(false)
     .flag("-std=c++17")
     .file("src/c/binding.cc")
+    .file("src/c/isolate.cc")
+    .file("src/c/recipro.cc")
     .include("src/c")
     .include("v8")
     .compile("binding");
