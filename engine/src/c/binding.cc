@@ -99,7 +99,6 @@ void Isolate::Dispose() {
 }
 
 bool Isolate::JsEval(const char *javascript, std::string& value) {
-
   v8::Isolate::Scope isolate_scope(isolate_);
   v8::HandleScope handle_scope(isolate_);
   
@@ -114,15 +113,20 @@ bool Isolate::JsEval(const char *javascript, std::string& value) {
       ).ToLocalChecked(); 
 
   auto script = v8::Script::Compile(context, source).ToLocalChecked();
-  auto result = script->Run(context);
 
+  v8::TryCatch trycatch(isolate_);
+  auto result = script->Run(context);
   if (result.IsEmpty()) {
+    v8::Local<v8::Value> exception = trycatch.Exception();
+    v8::String::Utf8Value exception_str(isolate_, exception);
+    
+    printf("Exception: %s\n", *exception_str);
+
     return false;
   }
 
   auto ret = result.ToLocalChecked();
   v8::String::Utf8Value utf8(isolate_, ret);
-
   value = *utf8;
 
   return true;

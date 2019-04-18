@@ -34,11 +34,9 @@ pub fn v8_version() -> Cow<'static, str> {
     }
 }
 
-pub fn eval() {
-    let script = CString::new("'Hello from rust!'")
+pub fn eval(js: String) {
+    let script = CString::new(js.as_str())
         .unwrap();
 
-    unsafe { 
-        js_eval(script.as_ptr()); 
-    }
+    unsafe { js_eval(script.as_ptr()); }
 }

@@ -6,7 +6,8 @@ fn main() {
 
   recipro_engine::init();
  
-  recipro_engine::eval();
+  recipro_engine::eval("'Hello from rust !'".to_string());
+  recipro_engine::eval("'Error !".to_string());
   
   recipro_engine::dispose();
   recipro_engine::shutdown_platform();
