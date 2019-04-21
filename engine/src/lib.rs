@@ -1,4 +1,5 @@
 extern crate libc;
+extern crate failure;
 
 use std::borrow::Cow;
 use std::ffi::{ CStr, CString };
@@ -36,15 +37,14 @@ pub fn shutdown() {
     }
 }
 
-pub fn execute_script(js: String) {
-    let script = CString::new(js.as_str())
-        .unwrap();
+pub fn execute_script(js: String) -> Result<(), failure::Error> {
+    let script = CString::new(js.as_str())?;
     
     unsafe { 
         let vm = init();
-
         execute(vm, script.as_ptr());
-
         dispose(vm);
     }
+
+    Ok(())
 }

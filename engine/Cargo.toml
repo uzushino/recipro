@@ -10,6 +10,7 @@ path = "src/lib.rs"
 
 [dependencies]
 libc = "*"
+failure = "*"
 
 [build-dependencies]
 cc = "1.0"
