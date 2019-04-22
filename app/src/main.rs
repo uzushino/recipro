@@ -7,8 +7,12 @@ fn main() -> Result<(), failure::Error> {
 
   recipro_engine::initialize();
 
-  recipro_engine::execute_script("'Hello from rust !'".to_string())?;
-  recipro_engine::execute_script("throw 'Error !'".to_string())?;
+  {
+    let isolate = recipro_engine::isolate::Isolate::new();
+
+    isolate.execute("'Hello from rust !'".to_string())?;
+    isolate.execute("throw 'Error !'".to_string())?;
+  }
 
   recipro_engine::shutdown();
 
