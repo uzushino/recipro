@@ -1,20 +1,16 @@
 extern crate failure;
 extern crate recipro_engine;
 
+use recipro_engine::platform::Platform;
+
 fn main() -> Result<(), failure::Error> {
-  let version = recipro_engine::v8_version();
+  let version = Platform::version();
   println!("version: {}", version);
 
-  recipro_engine::initialize();
-
-  {
-    let isolate = recipro_engine::isolate::Isolate::new();
-
-    isolate.execute("'Hello from rust !'".to_string())?;
-    isolate.execute("throw 'Error !'".to_string())?;
-  }
-
-  recipro_engine::shutdown();
+  let platform = Platform::new();
+  let isolate = platform.isolate();
+  isolate.execute("'Hello from rust !'".to_string())?;
+  isolate.execute("throw 'Error !'".to_string())?;
 
   Ok(())
 }

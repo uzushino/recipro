@@ -10,7 +10,6 @@ extern "C" {
     fn execute(vm: *mut ReciproVM, script: *const c_char);
 }
 
-
 pub struct Isolate {
   isolate: *mut ReciproVM,
 }
