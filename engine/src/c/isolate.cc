@@ -6,14 +6,23 @@
 
 using namespace recipro;
 
-void Isolate::Initialize() {
-  allocator_ = 
+void Isolate::Initialize(Snapshot *snapshot) {
+ allocator_ = 
     v8::ArrayBuffer::Allocator::NewDefaultAllocator();
   
   v8::Isolate::CreateParams create_params;
   create_params.array_buffer_allocator = allocator_;
 
+  if (snapshot) {
+    auto startup_data = new v8::StartupData;
+    startup_data->data = snapshot->data;
+    startup_data->raw_size = snapshot->snapshot_size;
+
+    create_params.snapshot_blob = startup_data;
+  }
+
   isolate_ = v8::Isolate::New(create_params);
+  creator_ = new v8::SnapshotCreator(isolate_);
 
   v8::Isolate::Scope isolate_scope(isolate_);
   {

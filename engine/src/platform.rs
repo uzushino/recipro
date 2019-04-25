@@ -4,7 +4,7 @@ use std::mem::ManuallyDrop;
 use std::os::raw::c_char;
 use std::ops::Deref;
 
-use crate::isolate::Isolate;
+use crate::isolate::{ Isolate, Snapshot };
 
 #[link(name = "binding", kind = "static")]
 extern "C" {
@@ -26,11 +26,11 @@ impl Platform {
       }
   }
 
-  pub fn new() -> Platform {
-      unsafe { v8_init(); }
+  pub fn new(snapshot: *mut Snapshot) -> Platform {
+      unsafe { v8_init() }
 
       Platform {
-        isolate: ManuallyDrop::new(Isolate::new()),
+        isolate: ManuallyDrop::new(Isolate::new(snapshot)),
       }
   }
 
