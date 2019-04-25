@@ -1,44 +1,33 @@
 #include "include/v8.h"
 #include "recipro.h"
 
-ReciproVM* init(recipro::Snapshot *snapshot) {
-  auto vm = new ReciproVM {};
+ReciproVM* init_recipro_core(recipro::SnapshotData snapshot) {
+  ReciproVM* vm = new ReciproVM {};
 
-  vm->isolate_ = std::make_shared<recipro::Isolate>();
-  vm->isolate_->Initialize(snapshot);
+  vm->isolate_ = std::make_shared<recipro::Isolate>(snapshot);
+  vm->isolate_->New();
 
-  auto isolate = vm->isolate_->isolate_;
-
-  v8::Isolate::Scope isolate_scope(isolate);
-  {
-    v8::HandleScope handle_scope(isolate);
-
+  vm->isolate_->RunIsolateScope([vm](auto isolate) {
     auto context = v8::Context::New(isolate);
 
-    vm->isolate_->context_.Reset(isolate, context);
-  }
+    vm->isolate_->Reset(context);
+  });
 
   return vm;
 }
 
-ReciproVM* init_snapshot() {
+ReciproVM* init_recipro_snapshot() {
   auto vm = new ReciproVM {};
+  
+  vm->isolate_ = std::make_shared<recipro::Isolate>();
+  vm->isolate_->NewForSnapshot();
 
-  auto* creator = new v8::SnapshotCreator();
-  v8::Isolate* isolate = creator->GetIsolate();
-
-  vm->isolate_ = std::make_shared<recipro::Isolate>(isolate);
-  vm->isolate_->creator_ = creator;
-
-  v8::Isolate::Scope isolate_scope(isolate);
-  {
-    v8::HandleScope handle_scope(isolate);
-
+  vm->isolate_->RunIsolateScope([vm](auto isolate) {
     auto context = v8::Context::New(isolate);
 
-    vm->isolate_->context_.Reset(isolate, context);
-    vm->isolate_->creator_->SetDefaultContext(context);
-  }
+    vm->isolate_->Reset(context);
+    vm->isolate_->DefaultContext(context);
+  });
 
   return vm;
 }
@@ -47,25 +36,20 @@ void dispose(ReciproVM* vm) {
   delete vm;
 }
 
-void execute(ReciproVM* vm, const char* script) {
-  vm->isolate_->JsEval(script);
+void eval(ReciproVM* vm, const char* script) {
+  vm->isolate_->Eval(script);
 }
 
-recipro::Snapshot* take_snapshot(ReciproVM *vm) {
-  vm->isolate_->context_.Reset();
+recipro::SnapshotData take_snapshot(ReciproVM *vm) {
+  vm->isolate_->Reset();
 
-  auto result = vm->isolate_->creator_->CreateBlob(
-        v8::SnapshotCreator::FunctionCodeHandling::kKeep
+  v8::StartupData result = vm->isolate_->CreateSnapshotDataBlob(
+    v8::SnapshotCreator::FunctionCodeHandling::kKeep
   );
 
-  auto *snapshot = new recipro::Snapshot;
-  snapshot->data = result.data;
-  snapshot->snapshot_size = result.raw_size;
-
-  return snapshot;
+  return {result.data, result.raw_size};
 }
 
-void delete_snapshot(recipro::Snapshot* snapshot) {
-  delete[] snapshot->data;
-  delete snapshot;
+void delete_snapshot(recipro::SnapshotData snapshot) {
+  delete[] snapshot.data;
 }

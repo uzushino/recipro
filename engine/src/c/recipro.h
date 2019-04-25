@@ -10,16 +10,15 @@ extern "C" {
     std::shared_ptr<recipro::Isolate> isolate_;
   } ReciproVM;
 
-  ReciproVM* init(recipro::Snapshot* snapshot); // construct
-  ReciproVM* init_snapshot(); // construct
+  ReciproVM* init_recipro_core(recipro::SnapshotData); // construct
+  ReciproVM* init_recipro_snapshot(); // construct
 
-  void dispose(ReciproVM* vm) ; // desctruct
+  void dispose(ReciproVM *) ; // desctruct
+  void eval(ReciproVM *, const char *) ;
 
-  void execute(ReciproVM* vm, const char* script) ;
+  recipro::SnapshotData take_snapshot(ReciproVM *); 
 
-  recipro::Snapshot* take_snapshot(ReciproVM *vm); 
-
-  void delete_snapshot(recipro::Snapshot* snapshot);
+  void delete_snapshot(recipro::SnapshotData);
 
 #ifdef __cplusplus
 }

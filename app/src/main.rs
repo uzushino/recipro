@@ -2,31 +2,33 @@ extern crate failure;
 extern crate recipro_engine;
 
 use recipro_engine::{ 
-  platform::Platform,
-  isolate::Snapshot
+  Platform,
+  Snapshot, Isolate, Engine
 };
 
 fn main() -> Result<(), failure::Error> {
   let version = Platform::version();
   println!("version: {}", version);
     
-  let snapshot: *mut Snapshot = {
-    let platform = Platform::new_snapshot();
-    let isolate = platform.isolate();
+  let snapshot = {
+    let engine = Snapshot::new();
+    Platform::new(&engine).engine_start();    
       
-    isolate.execute("a = 'Hello, '".to_string())?;
-    isolate.snapshot()
+    engine.execute("a = 'Hello, '".to_string())?;
+    engine.snapshot()
   };
 
-  unsafe {
-    {
-      let platform = Platform::new(snapshot);
-      let isolate = platform.isolate();
+  {
+    let s: &[u8] = unsafe {
+      std::slice::from_raw_parts(
+        snapshot.data_ptr, 
+        snapshot.data_size
+      )
+    };
+    let engine = Isolate::new(s);
+    Platform::new(&engine).engine_start();
 
-      isolate.execute("a + 'Rust !'".to_string())?;
-    }
-
-    recipro_engine::isolate::delete_snapshot(snapshot);
+    engine.execute("a + 'Rust !'".to_string())?;
   }
 
   Ok(())

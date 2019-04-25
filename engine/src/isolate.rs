@@ -1,68 +1,92 @@
 use std::ffi::CString;
 use std::os::raw::{ c_char, c_void };
+use std::cell::RefCell;
+use std::ops::Deref;
 
-pub enum ReciproVM {}
+use crate::{ Engine, Isolate, Snapshot, ReciproVM };
 
 #[repr(C)]
-pub struct Snapshot {
+pub struct SnapshotData {
   pub data_ptr: *const u8,
   pub data_size: usize,
 }
 
 #[link(name = "binding", kind = "static")]
 extern "C" {
-    fn init(snapshot: *mut Snapshot) -> *mut ReciproVM;
-    fn init_snapshot() -> *mut ReciproVM;
+    fn init_recipro_core(snapshot: SnapshotData) -> *mut ReciproVM;
+    fn init_recipro_snapshot() -> *mut ReciproVM;
 
     fn dispose(vm: *mut ReciproVM);
-    fn execute(vm: *mut ReciproVM, script: *const c_char);
+    fn eval(vm: *mut ReciproVM, script: *const c_char);
 
-    fn take_snapshot(vm: *mut ReciproVM) -> *mut Snapshot;
-    pub fn delete_snapshot(vm: *mut Snapshot) ;
+    fn take_snapshot(vm: *mut ReciproVM) -> SnapshotData;
+    fn delete_snapshot(vm: *const u8) ;
 }
 
-pub struct Isolate {
-  isolate: *mut ReciproVM,
-}
-
-impl Isolate {
-  pub fn new(snapshot: *mut Snapshot) -> Isolate {
-    let vm = unsafe { init(snapshot) };
-
+impl<'a> Isolate<'a> {
+  pub fn new(snapshot: &[u8]) -> Isolate {
     Isolate {
-      isolate: vm,
+      snapshot_data: snapshot,
+      vm: RefCell::new(std::ptr::null_mut()),
+    }
+  }
+}
+
+impl<'a> Engine for Isolate<'a> { 
+  fn core(&self) -> *mut ReciproVM {
+    *self.vm.borrow_mut()
+  }
+
+  fn init(&self) {
+    let vm = unsafe { 
+      let snapshot = SnapshotData {
+        data_ptr: self.snapshot_data.as_ref().as_ptr(),
+        data_size: self.snapshot_data.len()
+      };
+
+      init_recipro_core(snapshot)
+    };
+
+    self.vm.replace(vm);
+  }
+}
+
+impl Snapshot {
+  pub fn new() -> Snapshot {
+    Snapshot {
+      vm: RefCell::new(std::ptr::null_mut()),
     }
   }
   
-  pub fn new_snapshot() -> Isolate {
-    let vm = unsafe { init_snapshot() };
-
-    Isolate {
-      isolate: vm,
-    }
-  }
-
-  pub fn execute(&self, js: String) -> Result<(), failure::Error> {
-      let script = CString::new(js.as_str())?;
-      
-      unsafe { 
-        execute(self.isolate, script.as_ptr()); 
-      }
-
-      Ok(())
-  }
-
-  pub fn snapshot(&self) -> *mut Snapshot {
-      unsafe { 
-        take_snapshot(self.isolate)
-      }
+  pub fn snapshot(&self) -> SnapshotData {
+    unsafe { take_snapshot(*self.vm.borrow().deref()) }
   }
 }
 
-impl Drop for Isolate {
+impl Engine for Snapshot { 
+  fn core(&self) -> *mut ReciproVM {
+    *self.vm.borrow_mut()
+  }
+  
+  fn init(&self) {
+    let vm = unsafe { init_recipro_snapshot() };
+    self.vm.replace(vm);
+  }
+}
+
+impl<'a> Drop for Isolate<'a> {
+  fn drop(&mut self) {
+    unsafe {
+      delete_snapshot(self.snapshot_data.as_ref().as_ptr());
+      dispose(*self.vm.get_mut()); 
+    }
+  }
+}
+
+impl Drop for Snapshot {
   fn drop(&mut self) {
     unsafe { 
-      dispose(self.isolate); 
+      dispose(*self.vm.get_mut()); 
     }
   }
 }

@@ -6,38 +6,25 @@
 
 using namespace recipro;
 
-void Isolate::Initialize(Snapshot *snapshot) {
- allocator_ = 
-    v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+void Isolate::New() {
+  allocator_ = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
   
   v8::Isolate::CreateParams params;
   params.array_buffer_allocator = allocator_;
 
-  if (snapshot) { // Load from snapshot.
-    params.snapshot_blob = reinterpret_cast<v8::StartupData *>(snapshot);
+  if (HasSnapshot()) { // Load from snapshot.
+    params.snapshot_blob = &startup_data_;
   }
 
   isolate_ = v8::Isolate::New(params);
 }
 
-void Isolate::Dispose() {
-  if (creator_) {
-    delete creator_;
-    creator_ = NULL;
-  } else {
-    if (isolate_) {
-      isolate_->Dispose();
-      isolate_ = NULL;
-    }
-  }
-
-  if (allocator_) {
-    delete allocator_;
-    allocator_ = NULL;
-  }
+void Isolate::NewForSnapshot() {
+  creator_ = new v8::SnapshotCreator();
+  isolate_ = creator_->GetIsolate();
 }
 
-bool Isolate::JsEval(const char *javascript) {
+bool Isolate::Eval(const char *javascript) {
   v8::Isolate::Scope isolate_scope(isolate_);
   v8::HandleScope handle_scope(isolate_);
   
@@ -55,13 +42,8 @@ bool Isolate::JsEval(const char *javascript) {
 
   v8::TryCatch trycatch(isolate_);
   auto result = script->Run(context);
-
   if (result.IsEmpty()) {
     v8::Local<v8::Value> exception = trycatch.Exception();
-    v8::String::Utf8Value exception_str(isolate_, exception);
-
-    printf("Exception: %s\n", *exception_str);
-
     return false;
   }
 
@@ -70,4 +52,12 @@ bool Isolate::JsEval(const char *javascript) {
   printf("Result: %s\n", *utf8);
 
   return true;
+}
+
+v8::StartupData Isolate::CreateSnapshotDataBlob(
+  v8::SnapshotCreator::FunctionCodeHandling handling
+) {
+  v8::StartupData result = creator_->CreateBlob(handling); 
+
+  return result;
 }
