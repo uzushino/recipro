@@ -30,4 +30,5 @@ void v8_dispose() {
 
 void v8_shutdown_platform() {
   v8::V8::ShutdownPlatform();
+  platform = nullptr;
 }

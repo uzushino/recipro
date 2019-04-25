@@ -10,37 +10,25 @@ void Isolate::Initialize(Snapshot *snapshot) {
  allocator_ = 
     v8::ArrayBuffer::Allocator::NewDefaultAllocator();
   
-  v8::Isolate::CreateParams create_params;
-  create_params.array_buffer_allocator = allocator_;
+  v8::Isolate::CreateParams params;
+  params.array_buffer_allocator = allocator_;
 
-  if (snapshot) {
-    auto startup_data = new v8::StartupData;
-    startup_data->data = snapshot->data;
-    startup_data->raw_size = snapshot->snapshot_size;
-
-    create_params.snapshot_blob = startup_data;
+  if (snapshot) { // Load from snapshot.
+    params.snapshot_blob = reinterpret_cast<v8::StartupData *>(snapshot);
   }
 
-  isolate_ = v8::Isolate::New(create_params);
-  creator_ = new v8::SnapshotCreator(isolate_);
-
-  v8::Isolate::Scope isolate_scope(isolate_);
-  {
-    v8::HandleScope handle_scope(isolate_);
-
-    auto context = v8::Context::New(
-      isolate_, 
-      nullptr, 
-      v8::MaybeLocal<v8::ObjectTemplate>());
-
-    context_.Reset(isolate_, context);
-  }
+  isolate_ = v8::Isolate::New(params);
 }
 
 void Isolate::Dispose() {
-  if (isolate_) {
-    isolate_->Dispose();
-    isolate_ = NULL;
+  if (creator_) {
+    delete creator_;
+    creator_ = NULL;
+  } else {
+    if (isolate_) {
+      isolate_->Dispose();
+      isolate_ = NULL;
+    }
   }
 
   if (allocator_) {

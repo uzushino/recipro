@@ -12,6 +12,8 @@ pub struct Snapshot {
 #[link(name = "binding", kind = "static")]
 extern "C" {
     fn init(snapshot: *mut Snapshot) -> *mut ReciproVM;
+    fn init_snapshot() -> *mut ReciproVM;
+
     fn dispose(vm: *mut ReciproVM);
     fn execute(vm: *mut ReciproVM, script: *const c_char);
 
@@ -26,6 +28,14 @@ pub struct Isolate {
 impl Isolate {
   pub fn new(snapshot: *mut Snapshot) -> Isolate {
     let vm = unsafe { init(snapshot) };
+
+    Isolate {
+      isolate: vm,
+    }
+  }
+  
+  pub fn new_snapshot() -> Isolate {
+    let vm = unsafe { init_snapshot() };
 
     Isolate {
       isolate: vm,

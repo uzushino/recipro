@@ -11,15 +11,21 @@ fn main() -> Result<(), failure::Error> {
   println!("version: {}", version);
     
   let snapshot: *mut Snapshot = {
-    let platform = Platform::new(std::ptr::null_mut());
+    let platform = Platform::new_snapshot();
     let isolate = platform.isolate();
-
-    isolate.execute("a = 1".to_string())?;
+      
+    isolate.execute("a = 'Hello, '".to_string())?;
     isolate.snapshot()
   };
 
   unsafe {
-    println!("snapshot size: {}", (* snapshot).data_size);
+    {
+      let platform = Platform::new(snapshot);
+      let isolate = platform.isolate();
+
+      isolate.execute("a + 'Rust !'".to_string())?;
+    }
+
     recipro_engine::isolate::delete_snapshot(snapshot);
   }
 

@@ -11,6 +11,7 @@ extern "C" {
   } ReciproVM;
 
   ReciproVM* init(recipro::Snapshot* snapshot); // construct
+  ReciproVM* init_snapshot(); // construct
 
   void dispose(ReciproVM* vm) ; // desctruct
 

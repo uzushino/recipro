@@ -9,8 +9,8 @@ use crate::isolate::{ Isolate, Snapshot };
 #[link(name = "binding", kind = "static")]
 extern "C" {
     fn v8_init() ;
-    fn v8_dispose() ;
-    fn v8_shutdown_platform() ;
+    pub fn v8_dispose() ;
+    pub fn v8_shutdown_platform() ;
     fn v8_get_version() -> *const c_char;
 }
 
@@ -33,6 +33,14 @@ impl Platform {
         isolate: ManuallyDrop::new(Isolate::new(snapshot)),
       }
   }
+  
+  pub fn new_snapshot() -> Platform {
+      unsafe { v8_init() }
+
+      Platform {
+        isolate: ManuallyDrop::new(Isolate::new_snapshot()),
+      }
+  }
 
   pub fn isolate(&self) -> &Isolate {
     self.isolate.deref()
@@ -52,6 +60,6 @@ impl Drop for Platform {
       ManuallyDrop::drop(&mut self.isolate);
     }
 
-    Self::shutdown();
+    //Self::shutdown();
   }
 }

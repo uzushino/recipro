@@ -11,7 +11,9 @@ namespace recipro {
   class Isolate {
     public:
       Isolate() 
-        : isolate_(nullptr), allocator_(nullptr), creator_(nullptr) { }
+        : isolate_(nullptr), allocator_(nullptr), creator_(nullptr) { };
+      Isolate(v8::Isolate *isolate) 
+        : isolate_(isolate), allocator_(nullptr), creator_(nullptr) { };
       ~Isolate() {
         Dispose();
       }
