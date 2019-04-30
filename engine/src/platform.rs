@@ -9,8 +9,8 @@ use crate::{ Platform, Engine };
 #[link(name = "binding", kind = "static")]
 extern "C" {
     fn v8_init() ;
-    pub fn v8_dispose() ;
-    pub fn v8_shutdown_platform() ;
+    fn v8_dispose() ;
+    fn v8_shutdown_platform() ;
     fn v8_get_version() -> *const c_char;
 }
 

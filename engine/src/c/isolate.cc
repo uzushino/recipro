@@ -57,7 +57,5 @@ bool Isolate::Eval(const char *javascript) {
 v8::StartupData Isolate::CreateSnapshotDataBlob(
   v8::SnapshotCreator::FunctionCodeHandling handling
 ) {
-  v8::StartupData result = creator_->CreateBlob(handling); 
-
-  return result;
+  return creator_->CreateBlob(handling); 
 }

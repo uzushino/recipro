@@ -1,5 +1,3 @@
-use std::ffi::CString;
-use std::os::raw::{ c_char, c_void };
 use std::cell::RefCell;
 use std::ops::Deref;
 
@@ -11,16 +9,22 @@ pub struct SnapshotData {
   pub data_size: usize,
 }
 
+impl SnapshotData {
+  pub fn as_slice<'a>(&self) -> &'a [u8] {
+    unsafe {
+      std::slice::from_raw_parts(self.data_ptr, self.data_size)
+    }
+  }
+}
+
 #[link(name = "binding", kind = "static")]
 extern "C" {
     fn init_recipro_core(snapshot: SnapshotData) -> *mut ReciproVM;
     fn init_recipro_snapshot() -> *mut ReciproVM;
 
     fn dispose(vm: *mut ReciproVM);
-    fn eval(vm: *mut ReciproVM, script: *const c_char);
-
     fn take_snapshot(vm: *mut ReciproVM) -> SnapshotData;
-    fn delete_snapshot(vm: *const u8) ;
+    fn delete_snapshot(ptr: *const u8) ;
 }
 
 impl<'a> Isolate<'a> {
@@ -61,6 +65,10 @@ impl Snapshot {
   pub fn snapshot(&self) -> SnapshotData {
     unsafe { take_snapshot(*self.vm.borrow().deref()) }
   }
+
+  pub fn delete_snapshot(data_ptr: *const u8) {
+    unsafe { delete_snapshot(data_ptr); }
+  }
 }
 
 impl Engine for Snapshot { 
@@ -77,7 +85,6 @@ impl Engine for Snapshot {
 impl<'a> Drop for Isolate<'a> {
   fn drop(&mut self) {
     unsafe {
-      delete_snapshot(self.snapshot_data.as_ref().as_ptr());
       dispose(*self.vm.get_mut()); 
     }
   }

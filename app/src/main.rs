@@ -6,30 +6,37 @@ use recipro_engine::{
   Snapshot, Isolate, Engine
 };
 
+const SNAPSHOT_PATH: &'static str = "/tmp/snapshot";
+
+fn write_snapshot(script: &str) -> Result<(), failure::Error> {
+  let engine = Snapshot::new();
+  let platform = Platform::new(&engine);
+  platform.engine_start();
+
+  engine.eval(script.into())?;
+
+  let snapshot = engine.snapshot();
+  if snapshot.data_size > 0 {
+    std::fs::write(SNAPSHOT_PATH, snapshot.as_slice())?;
+    Snapshot::delete_snapshot(snapshot.data_ptr);
+  }
+
+  Ok(())
+}
+
 fn main() -> Result<(), failure::Error> {
   let version = Platform::version();
   println!("version: {}", version);
-    
-  let snapshot = {
-    let engine = Snapshot::new();
-    Platform::new(&engine).engine_start();    
-      
-    engine.execute("a = 'Hello, '".to_string())?;
-    engine.snapshot()
-  };
 
-  {
-    let s: &[u8] = unsafe {
-      std::slice::from_raw_parts(
-        snapshot.data_ptr, 
-        snapshot.data_size
-      )
-    };
-    let engine = Isolate::new(s);
-    Platform::new(&engine).engine_start();
+  write_snapshot("a = 'Hello, '")?;
 
-    engine.execute("a + 'Rust !'".to_string())?;
-  }
+  let s = std::fs::read(SNAPSHOT_PATH)?;
+
+  let engine = Isolate::new(s.as_slice());
+  let platform = Platform::new(&engine);
+  platform.engine_start();
+  
+  engine.eval("a + 'Rust !'".to_string())?;
 
   Ok(())
 }

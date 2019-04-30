@@ -18,7 +18,7 @@ extern "C" {
 
   recipro::SnapshotData take_snapshot(ReciproVM *); 
 
-  void delete_snapshot(recipro::SnapshotData);
+  void delete_snapshot(const char *);
 
 #ifdef __cplusplus
 }

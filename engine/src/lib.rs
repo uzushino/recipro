@@ -24,13 +24,11 @@ pub struct Platform<'a> {
 pub trait Engine {
   fn core(&self) -> *mut ReciproVM;
   fn init(&self);
-  fn execute(&self, js: String) -> Result<(), failure::Error> {
+  fn eval(&self, js: String) -> Result<(), failure::Error> {
       let script = CString::new(js.as_str())?;
-
       unsafe { 
         eval(self.core(), script.as_ptr()); 
       }
-
       Ok(())
   }
 }

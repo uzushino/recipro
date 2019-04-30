@@ -50,6 +50,6 @@ recipro::SnapshotData take_snapshot(ReciproVM *vm) {
   return {result.data, result.raw_size};
 }
 
-void delete_snapshot(recipro::SnapshotData snapshot) {
-  delete[] snapshot.data;
+void delete_snapshot(const char *data_ptr) {
+  delete[] data_ptr;
 }
