@@ -8,8 +8,7 @@
 
 #include "binding.h"
 
-const char* v8_get_version() 
-{
+const char* v8_get_version() {
   return v8::V8::GetVersion();
 }
 
