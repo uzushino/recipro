@@ -67,6 +67,10 @@ namespace recipro {
 
       v8::StartupData CreateSnapshotDataBlob(v8::SnapshotCreator::FunctionCodeHandling);
 
+      v8::Isolate* Raw() { 
+        return isolate_; 
+      }
+
     private:
       bool HasSnapshot() {
         return startup_data_.raw_size > 0 && startup_data_.data != nullptr;

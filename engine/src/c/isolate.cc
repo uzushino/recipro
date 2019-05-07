@@ -24,11 +24,29 @@ void Isolate::NewForSnapshot() {
   isolate_ = creator_->GetIsolate();
 }
 
+static void LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  printf("aaaa\n");
+  if (args.Length() < 1) return;
+
+  v8::Isolate* isolate = args.GetIsolate();
+  v8::HandleScope scope(isolate);
+
+  v8::Local<v8::Value> arg = args[0];
+  v8::String::Utf8Value value(isolate, arg);
+
+  printf("Logged: %s\n", *value);
+}
+
 bool Isolate::Eval(const char *javascript) {
   v8::Isolate::Scope isolate_scope(isolate_);
   v8::HandleScope handle_scope(isolate_);
+
+  v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate_);
+  global->Set(v8::String::NewFromUtf8(isolate_, "log", v8::NewStringType::kNormal).ToLocalChecked(),
+            v8::FunctionTemplate::New(isolate_, LogCallback));
   
-  auto context = context_.Get(isolate_);
+  v8::Local<v8::Context> context = v8::Context::New(isolate_, NULL, global);
+
   v8::Context::Scope context_scope(context);
 
   auto source =

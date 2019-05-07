@@ -32,7 +32,7 @@ fn main() -> Result<(), failure::Error> {
     let platform = Platform::new(&engine);
     platform.engine_start();
 
-    engine.eval("a + 'Rust !'".to_string())?;
+    engine.eval("log(a)".to_string())?;
 
     Ok(())
 }

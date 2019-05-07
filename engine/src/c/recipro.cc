@@ -28,7 +28,6 @@ ReciproVM* init_recipro_snapshot() {
     vm->isolate_->Reset(context);
     vm->isolate_->DefaultContext(context);
   });
-
   return vm;
 }
 
