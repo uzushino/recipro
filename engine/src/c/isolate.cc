@@ -6,26 +6,7 @@
 
 using namespace recipro;
 
-void Isolate::New() {
-  allocator_ = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
-  
-  v8::Isolate::CreateParams params;
-  params.array_buffer_allocator = allocator_;
-
-  if (HasSnapshot()) { // Load from snapshot.
-    params.snapshot_blob = &startup_data_;
-  }
-
-  isolate_ = v8::Isolate::New(params);
-}
-
-void Isolate::NewForSnapshot() {
-  creator_ = new v8::SnapshotCreator();
-  isolate_ = creator_->GetIsolate();
-}
-
-static void LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  printf("aaaa\n");
+void recipro::LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
   if (args.Length() < 1) return;
 
   v8::Isolate* isolate = args.GetIsolate();
@@ -37,16 +18,30 @@ static void LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
   printf("Logged: %s\n", *value);
 }
 
+void Isolate::New() {
+  allocator_ = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+  
+  v8::Isolate::CreateParams params;
+
+  params.array_buffer_allocator = allocator_;
+  params.external_references = recipro::external_references;
+  if (HasSnapshot()) { // Load from snapshot.
+    params.snapshot_blob = &startup_data_;
+  }
+
+  isolate_ = v8::Isolate::New(params);
+}
+
+void Isolate::NewForSnapshot() {
+  creator_ = new v8::SnapshotCreator(recipro::external_references);
+  isolate_ = creator_->GetIsolate();
+}
+
 bool Isolate::Eval(const char *javascript) {
   v8::Isolate::Scope isolate_scope(isolate_);
   v8::HandleScope handle_scope(isolate_);
 
-  v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate_);
-  global->Set(v8::String::NewFromUtf8(isolate_, "log", v8::NewStringType::kNormal).ToLocalChecked(),
-            v8::FunctionTemplate::New(isolate_, LogCallback));
-  
-  v8::Local<v8::Context> context = v8::Context::New(isolate_, NULL, global);
-
+  auto context = context_.Get(isolate_);
   v8::Context::Scope context_scope(context);
 
   auto source =

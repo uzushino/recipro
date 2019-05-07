@@ -1,5 +1,9 @@
 #include "include/v8.h"
+#include "src/base/logging.h"
+
 #include "recipro.h"
+
+using namespace recipro;
 
 ReciproVM* init_recipro_core(recipro::SnapshotData snapshot) {
   ReciproVM* vm = new ReciproVM {};
@@ -27,6 +31,29 @@ ReciproVM* init_recipro_snapshot() {
 
     vm->isolate_->Reset(context);
     vm->isolate_->DefaultContext(context);
+
+    {
+      v8::HandleScope handle_scope(isolate);
+      v8::Context::Scope context_scope(context);
+
+      auto global = context->Global();
+      auto global_val = v8::Object::New(isolate);
+      auto result = global->Set(
+        context, 
+        v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), "Recipro", v8::NewStringType::kNormal).ToLocalChecked(),
+        global_val
+      );
+      CHECK(result.FromJust());
+
+      auto log_tmpl = v8::FunctionTemplate::New(isolate, LogCallback);
+      auto log_val = log_tmpl->GetFunction(context).ToLocalChecked();
+      result = global_val->Set(
+        context,
+        v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), "log", v8::NewStringType::kNormal).ToLocalChecked(),
+        log_val
+      );
+      CHECK(result.FromJust());
+    }
   });
   return vm;
 }

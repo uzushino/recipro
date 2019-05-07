@@ -9,6 +9,13 @@ namespace recipro {
     int data_size;
   } SnapshotData ;
 
+  void LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args); 
+
+  static intptr_t external_references[] = {
+    reinterpret_cast<intptr_t>(LogCallback),
+    0
+  };
+
   class Isolate {
     public:
       Isolate() 
@@ -44,10 +51,9 @@ namespace recipro {
 
       void RunIsolateScope(std::function<void(v8::Isolate *)> f) {
           v8::Isolate::Scope isolate_scope(isolate_);
-          {
-            v8::HandleScope handle_scope(isolate_);
-            f(isolate_);
-          }
+          v8::HandleScope handle_scope(isolate_);
+          
+          f(isolate_);
       }
 
       bool Eval(const char *);
