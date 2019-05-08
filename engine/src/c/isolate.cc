@@ -57,6 +57,8 @@ bool Isolate::Eval(const char *javascript) {
   auto result = script->Run(context);
   if (result.IsEmpty()) {
     v8::Local<v8::Value> exception = trycatch.Exception();
+    v8::String::Utf8Value exception_str(isolate_, exception);
+    printf("Error: %s\n", *exception_str);
     return false;
   }
 
