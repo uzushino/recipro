@@ -1,5 +1,7 @@
 #pragma once
+
 #include <functional>
+#include <unordered_map>
 
 #include "include/v8.h"
 
@@ -8,6 +10,23 @@ namespace recipro {
     const char *data;
     int data_size;
   } SnapshotData ;
+
+  class ModuleInfo {
+    std::string filename_;
+    v8::Persistent<v8::Module> module_;
+
+  public:
+    ModuleInfo(v8::Isolate* isolate, v8::Local<v8::Module> _module, const char *filename) 
+    : filename_(filename) {
+      module_.Reset(isolate, _module);
+    }
+    size_t operator()(v8::Isolate *isolate) const {
+      return module_.Get(isolate)->GetIdentityHash();
+    }
+  };
+
+  typedef std::unordered_map<int, ModuleInfo> specifier_map;
+  typedef std::unordered_map<std::string, int> module_map;
 
   void LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args); 
 
@@ -72,15 +91,16 @@ namespace recipro {
       }
 
       v8::StartupData CreateSnapshotDataBlob(v8::SnapshotCreator::FunctionCodeHandling);
+      
+      int ModuleTree(const char *, const char *);
 
-      v8::Isolate* Raw() { 
-        return isolate_; 
-      }
-
+      v8::Isolate* Raw() { return isolate_; }
     private:
       bool HasSnapshot() {
         return startup_data_.raw_size > 0 && startup_data_.data != nullptr;
       }
+
+      v8::ScriptOrigin GetScriptOrigin(const char *);
 
     private:
       v8::StartupData startup_data_;
@@ -90,5 +110,8 @@ namespace recipro {
       v8::Persistent<v8::Context> context_;
 
       v8::SnapshotCreator* creator_;
+
+      specifier_map specifier_map_;
+      module_map module_map_;
   };
 };

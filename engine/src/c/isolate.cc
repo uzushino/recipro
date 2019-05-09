@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <functional>
 
 #include "isolate.h"
+#include "src/base/logging.h"
 
 using namespace recipro;
 
@@ -37,10 +39,17 @@ void Isolate::NewForSnapshot() {
   isolate_ = creator_->GetIsolate();
 }
 
+v8::MaybeLocal<v8::Module> InstantiateCallBack(
+  v8::Local<v8::Context> context, 
+  v8::Local<v8::String> specifier, 
+  v8::Local<v8::Module> referrer
+) {
+  return v8::Local<v8::Module>();
+}
+
 bool Isolate::Eval(const char *javascript) {
   v8::Isolate::Scope isolate_scope(isolate_);
   v8::HandleScope handle_scope(isolate_);
-
   auto context = context_.Get(isolate_);
   v8::Context::Scope context_scope(context);
 
@@ -67,6 +76,52 @@ bool Isolate::Eval(const char *javascript) {
   printf("Result: %s\n", *utf8);
 
   return true;
+}
+
+v8::ScriptOrigin Isolate::GetScriptOrigin(const char *name) {
+  using namespace v8;
+
+  ScriptOrigin origin(
+    String::NewFromUtf8(isolate_, name, NewStringType::kNormal).ToLocalChecked(),
+    Local<Integer>(), Local<Integer>(), Local<Boolean>(), Local<Integer>(),
+    Local<Value>(), Local<Boolean>(), Local<Boolean>(), True(isolate_));
+
+  return origin;
+}
+
+int Isolate::ModuleTree(const char* filename, const char* script) {
+  using namespace v8;
+  
+  v8::Isolate::Scope isolate_scope(isolate_);
+  HandleScope handle_scope(isolate_);
+  
+  auto source_text = String::NewFromUtf8(isolate_, script, NewStringType::kNormal).ToLocalChecked();
+  auto origin = GetScriptOrigin(filename);
+  ScriptCompiler::Source source(source_text, origin);
+
+  v8::TryCatch try_catch(isolate_);
+  auto compiled = ScriptCompiler::CompileModule(isolate_, &source);
+  if (try_catch.HasCaught()) {
+    return 0;
+  }
+
+  auto module = compiled.ToLocalChecked();
+  int id = module->GetIdentityHash();
+
+  for (int i = 0, length = module->GetModuleRequestsLength(); i < length; ++ i) {
+    Local<String> name = module->GetModuleRequest(i);
+
+    if (! this->specifier_map_.count(id)) {
+      if (ModuleTree(filename, script) == 0) {
+        return 0;
+      }
+    }
+  }
+  
+  specifier_map_
+    .insert(std::make_pair(id, ModuleInfo(isolate_, module, filename)));
+
+  return id;
 }
 
 v8::StartupData Isolate::CreateSnapshotDataBlob(
