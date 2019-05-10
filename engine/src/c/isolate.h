@@ -1,9 +1,13 @@
 #pragma once
 
 #include <functional>
-#include <unordered_map>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "include/v8.h"
+#include "src/base/logging.h"
 
 namespace recipro {
   typedef struct {
@@ -11,22 +15,20 @@ namespace recipro {
     int data_size;
   } SnapshotData ;
 
-  class ModuleInfo {
+  struct ModuleInfo {
     std::string filename_;
+    std::vector<std::string> specifier_;
     v8::Persistent<v8::Module> module_;
 
-  public:
-    ModuleInfo(v8::Isolate* isolate, v8::Local<v8::Module> _module, const char *filename) 
-    : filename_(filename) {
-      module_.Reset(isolate, _module);
-    }
-    size_t operator()(v8::Isolate *isolate) const {
-      return module_.Get(isolate)->GetIdentityHash();
+    ModuleInfo(v8::Isolate* isolate, v8::Local<v8::Module> module, 
+      const char *filename, std::vector<std::string> specifier) 
+    : filename_(filename), specifier_(specifier) {
+      module_.Reset(isolate, module);
     }
   };
 
-  typedef std::unordered_map<int, ModuleInfo> specifier_map;
-  typedef std::unordered_map<std::string, int> module_map;
+  typedef std::map<int, ModuleInfo> specifier_map;
+  typedef std::map<std::string, int> module_map;
 
   void LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args); 
 
@@ -94,7 +96,29 @@ namespace recipro {
       
       int ModuleTree(const char *, const char *);
 
+      ModuleInfo* FindModuleInfo(int id) {
+        if (id == 0) {
+          return nullptr;
+        }
+
+        auto it = specifier_map_.find(id);
+        if (it != specifier_map_.end()) {
+          return &it->second;
+        } 
+        
+        return nullptr;
+      }
+
       v8::Isolate* Raw() { return isolate_; }
+      
+      v8::Local<v8::Context> GetContext() {
+        return context_.Get(isolate_);
+      }
+
+      v8::Local<v8::Context> GetContext(v8::Isolate *isolate) {
+        return context_.Get(isolate);
+      }
+
     private:
       bool HasSnapshot() {
         return startup_data_.raw_size > 0 && startup_data_.data != nullptr;

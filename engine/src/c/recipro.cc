@@ -1,3 +1,4 @@
+#include <functional>
 #include "include/v8.h"
 #include "src/base/logging.h"
 
@@ -78,4 +79,35 @@ recipro::SnapshotData take_snapshot(ReciproVM *vm) {
 
 void delete_snapshot(const char *data_ptr) {
   delete[] data_ptr;
+}
+
+int module_compile(ReciproVM* vm, const char *filename, const char *script) {
+  return vm->isolate_->ModuleTree(filename, script);
+}
+
+void module_instantiate(ReciproVM* vm, int id) {
+  using namespace v8;
+
+  v8::Isolate *isolate = vm->isolate_->Raw();
+  v8::Isolate::Scope isolate_scope(isolate);
+  v8::HandleScope handle_scope(isolate);
+
+  auto context = vm->isolate_->GetContext();
+  v8::Context::Scope context_scope(context);
+
+  auto callback = [](Local<Context> context, Local<String> specifier, Local<Module> referrer) {
+    return MaybeLocal<Module>();
+  };
+
+  TryCatch try_catch(isolate);
+  {
+    auto info = vm->isolate_->FindModuleInfo(id);
+    if (info == nullptr) {
+      return ;
+    }
+
+    Local<Module> module = info->module_.Get(isolate);
+    auto instantiated = module->InstantiateModule(context, callback);
+    CHECK(instantiated.IsJust() || try_catch.HasCaught());
+  }
 }

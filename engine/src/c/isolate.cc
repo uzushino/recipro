@@ -2,9 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <functional>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "isolate.h"
 #include "src/base/logging.h"
+#include "isolate.h"
+#include "binding.h"
 
 using namespace recipro;
 
@@ -105,21 +110,21 @@ int Isolate::ModuleTree(const char* filename, const char* script) {
     return 0;
   }
 
+  std::vector<std::string> specifiers;
   auto module = compiled.ToLocalChecked();
   int id = module->GetIdentityHash();
 
   for (int i = 0, length = module->GetModuleRequestsLength(); i < length; ++ i) {
     Local<String> name = module->GetModuleRequest(i);
-
-    if (! this->specifier_map_.count(id)) {
-      if (ModuleTree(filename, script) == 0) {
-        return 0;
-      }
-    }
+    v8::String::Utf8Value utf8(isolate_, name);
+    specifiers.push_back(*utf8);
   }
-  
-  specifier_map_
-    .insert(std::make_pair(id, ModuleInfo(isolate_, module, filename)));
+
+  specifier_map_.emplace(
+      std::piecewise_construct, std::make_tuple(id),
+      std::make_tuple(isolate_, module, filename, specifiers));
+  module_map_
+    .insert(std::make_pair(filename, id)); 
 
   return id;
 }

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string.h>
+#include "include/v8.h"
+
 extern "C" {
   const char* v8_get_version();
 

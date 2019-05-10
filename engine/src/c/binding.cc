@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 #include "include/v8.h"
 #include "include/libplatform/libplatform.h"
 #include "src/base/logging.h"
@@ -31,11 +32,4 @@ void v8_dispose() {
 void v8_shutdown_platform() {
   v8::V8::ShutdownPlatform();
   platform = nullptr;
-}
-
-std::string ToUtf8String(v8::Isolate* isolate, v8::Local<v8::String> v8_str) {
-  v8::String::Utf8Value utf8(isolate, v8_str);
-  CHECK(*utf8);
-
-  return *utf8;
 }

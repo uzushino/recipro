@@ -17,8 +17,10 @@ extern "C" {
   void eval(ReciproVM *, const char *) ;
 
   recipro::SnapshotData take_snapshot(ReciproVM *); 
-
   void delete_snapshot(const char *);
+
+  int module_compile(ReciproVM *, const char *, const char *);
+  void module_instantiate(ReciproVM *, int);
 
 #ifdef __cplusplus
 }
