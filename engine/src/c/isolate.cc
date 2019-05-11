@@ -37,11 +37,13 @@ void Isolate::New() {
   }
 
   isolate_ = v8::Isolate::New(params);
+  isolate_->SetData(0, this);
 }
 
 void Isolate::NewForSnapshot() {
   creator_ = new v8::SnapshotCreator(recipro::external_references);
   isolate_ = creator_->GetIsolate();
+  isolate_->SetData(0, this);
 }
 
 v8::MaybeLocal<v8::Module> InstantiateCallBack(

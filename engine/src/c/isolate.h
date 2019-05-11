@@ -10,6 +10,8 @@
 #include "src/base/logging.h"
 
 namespace recipro {
+  typedef int (* ReciproResolevCallback)(void *data, const char *, int);
+
   typedef struct {
     const char *data;
     int data_size;
@@ -40,10 +42,10 @@ namespace recipro {
   class Isolate {
     public:
       Isolate() 
-        : isolate_(nullptr), allocator_(nullptr), creator_(nullptr) { };
+        : isolate_(nullptr), allocator_(nullptr), creator_(nullptr), resolve_data_(nullptr) { };
 
       Isolate(recipro::SnapshotData snapshot) 
-        : isolate_(nullptr), allocator_(nullptr), creator_(nullptr) { 
+        : isolate_(nullptr), allocator_(nullptr), creator_(nullptr), resolve_data_(nullptr) { 
           if (snapshot.data && snapshot.data_size > 0) {
             startup_data_.data = snapshot.data;
             startup_data_.raw_size = snapshot.data_size;
@@ -137,5 +139,9 @@ namespace recipro {
 
       specifier_map specifier_map_;
       module_map module_map_;
+
+    public:
+      void *resolve_data_;
+      ReciproResolevCallback resolve_callback_;
   };
 };

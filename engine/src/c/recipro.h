@@ -20,7 +20,8 @@ extern "C" {
   void delete_snapshot(const char *);
 
   int module_compile(ReciproVM *, const char *, const char *);
-  void module_instantiate(ReciproVM *, int);
+  void module_instantiate(ReciproVM *, int, void *data, recipro::ReciproResolevCallback);
+  bool module_evaluate(ReciproVM *, int);
 
 #ifdef __cplusplus
 }

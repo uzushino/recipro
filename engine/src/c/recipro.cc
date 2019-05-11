@@ -85,7 +85,68 @@ int module_compile(ReciproVM* vm, const char *filename, const char *script) {
   return vm->isolate_->ModuleTree(filename, script);
 }
 
-void module_instantiate(ReciproVM* vm, int id) {
+v8::MaybeLocal<v8::Module> ResolevCallback(
+  v8::Local<v8::Context> context, v8::Local<v8::String> specifier, v8::Local<v8::Module> referrer
+) {
+  v8::Isolate *isolate = context->GetIsolate();
+  v8::Isolate::Scope isolate_scope(isolate);
+
+  auto inst = static_cast<recipro::Isolate*>(isolate->GetData(0));
+  auto referrer_id = referrer->GetIdentityHash();
+  auto* info = inst->FindModuleInfo(referrer_id);
+  CHECK_NOT_NULL(info);
+
+  v8::String::Utf8Value utf8(isolate, specifier);
+  auto id = inst->resolve_callback_(inst->resolve_data_, *utf8, referrer_id);
+  auto *module_info = inst->FindModuleInfo(id);
+  if (module_info) {
+    return module_info->module_.Get(isolate);
+  }
+
+  return v8::MaybeLocal<v8::Module>();
+}
+
+class ResolveDataScope {
+  recipro::Isolate *isolate_;
+  void *data_;
+
+  public:
+    ResolveDataScope(recipro::Isolate *isolate, void *data): data_(data), isolate_(isolate) {
+      isolate_->resolve_data_ = data;
+    }
+    
+    ~ResolveDataScope() {
+      isolate_->resolve_callback_ = nullptr;
+    }
+};
+
+void module_instantiate(ReciproVM* vm, void *data, int id, ReciproResolevCallback callback) {
+  using namespace v8;
+
+  v8::Isolate *isolate = vm->isolate_->Raw();
+  v8::Isolate::Scope isolate_scope(isolate);
+  v8::HandleScope handle_scope(isolate);
+  ResolveDataScope resolve_scope(vm->isolate_.get(), data);
+
+  auto context = vm->isolate_->GetContext();
+  v8::Context::Scope context_scope(context);
+  vm->isolate_->resolve_callback_ = callback;
+
+  TryCatch try_catch(isolate);
+  {
+    auto info = vm->isolate_->FindModuleInfo(id);
+    if (info == nullptr) {
+      return ;
+    }
+
+    auto module = info->module_.Get(isolate);
+    auto instantiated = module->InstantiateModule(context, ResolevCallback);
+
+    CHECK(instantiated.IsJust() || try_catch.HasCaught());
+  }
+}
+
+bool module_evaluate(ReciproVM* vm, int id) {
   using namespace v8;
 
   v8::Isolate *isolate = vm->isolate_->Raw();
@@ -95,19 +156,22 @@ void module_instantiate(ReciproVM* vm, int id) {
   auto context = vm->isolate_->GetContext();
   v8::Context::Scope context_scope(context);
 
-  auto callback = [](Local<Context> context, Local<String> specifier, Local<Module> referrer) {
-    return MaybeLocal<Module>();
-  };
-
   TryCatch try_catch(isolate);
   {
     auto info = vm->isolate_->FindModuleInfo(id);
     if (info == nullptr) {
-      return ;
+      return false;
     }
 
-    Local<Module> module = info->module_.Get(isolate);
-    auto instantiated = module->InstantiateModule(context, callback);
-    CHECK(instantiated.IsJust() || try_catch.HasCaught());
+    auto module = info->module_.Get(isolate);
+    auto maybe_result = module->Evaluate(context);
+
+    Local<Value> result;
+    if (!maybe_result.ToLocal(&result)) {
+      DCHECK(try_catch.HasCaught());
+      return false;
+    }
+
+    return true;
   }
 }
