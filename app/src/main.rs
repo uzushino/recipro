@@ -1,7 +1,9 @@
 extern crate failure;
 extern crate recipro_engine;
 
-use recipro_engine::{Engine, Isolate, Platform, Snapshot};
+use std::ffi::CString;
+
+use recipro_engine::{ Engine, Isolate, Platform, Snapshot, module::Module };
 
 const SNAPSHOT_PATH: &'static str = "/tmp/snapshot";
 
@@ -32,7 +34,15 @@ fn main() -> Result<(), failure::Error> {
     let platform = Platform::new(&engine);
     platform.engine_start();
 
-    engine.eval("Recipro.log(a + 'Rust !')".to_string())?;
+    let vm = engine.core();
+    let name = CString::new("a.js")?;
+    let script = CString::new("import { b } from 'b.js'\n1 + 1;")?;
+    let id = Module::compile(vm, name.as_ptr(), script.as_ptr());
+
+    Module::instantiate(vm, id, &mut |s, id| {
+        unsafe { println!("specifier"); }
+        id
+    });
 
     Ok(())
 }

@@ -101,7 +101,9 @@ int Isolate::ModuleTree(const char* filename, const char* script) {
   
   v8::Isolate::Scope isolate_scope(isolate_);
   HandleScope handle_scope(isolate_);
-  
+  auto context = context_.Get(isolate_);
+  v8::Context::Scope context_scope(context);
+
   auto source_text = String::NewFromUtf8(isolate_, script, NewStringType::kNormal).ToLocalChecked();
   auto origin = GetScriptOrigin(filename);
   ScriptCompiler::Source source(source_text, origin);
@@ -109,6 +111,9 @@ int Isolate::ModuleTree(const char* filename, const char* script) {
   v8::TryCatch try_catch(isolate_);
   auto compiled = ScriptCompiler::CompileModule(isolate_, &source);
   if (try_catch.HasCaught()) {
+    v8::Local<v8::Value> exception = try_catch.Exception();
+    v8::String::Utf8Value exception_str(isolate_, exception);
+    printf("Error: %s\n", *exception_str);
     return 0;
   }
 

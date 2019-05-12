@@ -120,7 +120,7 @@ class ResolveDataScope {
     }
 };
 
-void module_instantiate(ReciproVM* vm, void *data, int id, ReciproResolevCallback callback) {
+void module_instantiate(ReciproVM* vm, int id, void *data, ReciproResolevCallback callback) {
   using namespace v8;
 
   v8::Isolate *isolate = vm->isolate_->Raw();
