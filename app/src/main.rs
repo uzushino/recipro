@@ -38,11 +38,13 @@ fn main() -> Result<(), failure::Error> {
     let name = CString::new("a.js")?;
     let script = CString::new("import { b } from 'b.js'\n1 + 1;")?;
     let id = Module::compile(vm, name.as_ptr(), script.as_ptr());
+    println!("compile id {}", id);
 
-    Module::instantiate(vm, id, &mut |s, id| {
-        unsafe { println!("specifier"); }
+    let a = &mut |_s, id| {
+        println!("specifier\n");
         id
-    });
+    };
+    Module::instantiate(vm, id, a);
 
     Ok(())
 }

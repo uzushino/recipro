@@ -1,9 +1,11 @@
-use std::os::raw::{ c_int, c_char, c_void };
-
+use libc::{ c_void, c_int, c_char };
 use crate::{ ReciproVM };
 
-type Callback = extern "C" fn(*mut c_void, *const c_char, c_int) -> c_int;
-type Closure = dyn FnMut(*const c_char, c_int) -> c_int;
+use std::ffi::CStr;
+
+
+type Callback = extern "C" fn(*mut c_void, *mut c_char, c_int) -> c_int;
+type Closure<'a> = dyn FnMut(*mut c_char, c_int) -> c_int + 'a;
 
 mod ffi {
   use super::*;
@@ -11,7 +13,7 @@ mod ffi {
   #[link(name = "binding", kind = "static")]
   extern "C" {
     pub fn module_compile(vm: *mut ReciproVM, filename: *const c_char, script: *const c_char) -> c_int;
-    pub fn module_instantiate(vm: *mut ReciproVM, data: *mut c_void, id: c_int, f: Callback);
+    pub fn module_instantiate(vm: *mut ReciproVM, id: c_int, data: *mut c_void, f: Callback);
     pub fn module_evaluate(vm: *mut ReciproVM, id: c_int) -> *const c_int;
   }
 }
@@ -24,9 +26,10 @@ impl Module {
   }
 
   pub fn instantiate(vm: *mut ReciproVM, id: i32, closure: &mut Closure) {
+    let mut closure_ptr = Box::new(closure);
     let _ = unsafe { 
-      let closure_ptr: &mut Closure = closure;
-      ffi::module_instantiate(vm, closure_ptr as *mut _ as *mut c_void, id, Self::resolve_callback) 
+      let ptr: *mut Closure = &mut *closure_ptr;
+      ffi::module_instantiate(vm, id, ptr as *mut c_void, Self::resolve_callback);
     };
   }
 
@@ -34,8 +37,8 @@ impl Module {
     let _ = unsafe { ffi::module_evaluate(vm, id) };
   }
 
-  extern "C" fn resolve_callback(data: *mut c_void, specifier: *const c_char, id: c_int) -> c_int {
-    let closure: &mut &mut Closure = unsafe { std::mem::transmute(data) };
-    closure(specifier, id)
+  extern "C" fn resolve_callback(data: *mut c_void, specifier: *mut c_char, id: c_int) -> c_int {
+    let mut closure: Box<Box<Closure>> = unsafe { Box::from_raw(data as *mut _) };
+    (*closure)(specifier, id)
   }
 }

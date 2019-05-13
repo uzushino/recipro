@@ -130,6 +130,7 @@ void module_instantiate(ReciproVM* vm, int id, void *data, ReciproResolevCallbac
 
   auto context = vm->isolate_->GetContext();
   v8::Context::Scope context_scope(context);
+
   vm->isolate_->resolve_callback_ = callback;
 
   TryCatch try_catch(isolate);
