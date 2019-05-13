@@ -36,15 +36,16 @@ fn main() -> Result<(), failure::Error> {
 
     let vm = engine.core();
     let name = CString::new("a.js")?;
-    let script = CString::new("import { b } from 'b.js'\n1 + 1;")?;
-    let id = Module::compile(vm, name.as_ptr(), script.as_ptr());
-    println!("compile id {}", id);
+    let script = CString::new("import b from 'b.js'\nRecipro.log(b());")?;
+    let mod_a = Module::compile(vm, name.as_ptr(), script.as_ptr());
+    
+    let name = CString::new("b.js")?;
+    let script = CString::new("export default function () { return 'this is b.js'; }")?;
+    let mod_b = Module::compile(vm, name.as_ptr(), script.as_ptr());
+    let specifier = &mut |_s, _id| mod_b;
 
-    let a = &mut |_s, id| {
-        println!("specifier\n");
-        id
-    };
-    Module::instantiate(vm, id, a);
+    Module::instantiate(vm, mod_a, specifier);
+    Module::evaluate(vm, mod_a);
 
     Ok(())
 }

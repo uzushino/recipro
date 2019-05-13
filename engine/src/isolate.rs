@@ -3,26 +3,30 @@ use std::ops::Deref;
 
 use crate::{Engine, Isolate, ReciproVM, Snapshot};
 
-#[repr(C)]
-pub struct SnapshotData {
-    pub data_ptr: *const u8,
-    pub data_size: usize,
-}
+mod ffi {
+    use super::*;
 
-impl SnapshotData {
-    pub fn as_slice<'a>(&self) -> &'a [u8] {
-        unsafe { std::slice::from_raw_parts(self.data_ptr, self.data_size) }
+    #[repr(C)]
+    pub struct SnapshotData {
+        pub data_ptr: *const u8,
+        pub data_size: usize,
     }
-}
 
-#[link(name = "binding", kind = "static")]
-extern "C" {
-    fn init_recipro_core(snapshot: SnapshotData) -> *mut ReciproVM;
-    fn init_recipro_snapshot() -> *mut ReciproVM;
+    impl SnapshotData {
+        pub fn as_slice<'a>(&self) -> &'a [u8] {
+            unsafe { std::slice::from_raw_parts(self.data_ptr, self.data_size) }
+        }
+    }
 
-    fn dispose(vm: *mut ReciproVM);
-    fn take_snapshot(vm: *mut ReciproVM) -> SnapshotData;
-    fn delete_snapshot(ptr: *const u8);
+    #[link(name = "binding", kind = "static")]
+    extern "C" {
+        pub fn init_recipro_core(snapshot: SnapshotData) -> *mut ReciproVM;
+        pub fn init_recipro_snapshot() -> *mut ReciproVM;
+
+        pub fn dispose(vm: *mut ReciproVM);
+        pub fn take_snapshot(vm: *mut ReciproVM) -> SnapshotData;
+        pub fn delete_snapshot(ptr: *const u8);
+    }
 }
 
 impl<'a> Isolate<'a> {
@@ -41,12 +45,12 @@ impl<'a> Engine for Isolate<'a> {
 
     fn init(&self) {
         let vm = unsafe {
-            let snapshot = SnapshotData {
+            let snapshot = ffi::SnapshotData {
                 data_ptr: self.snapshot_data.as_ref().as_ptr(),
                 data_size: self.snapshot_data.len(),
             };
 
-            init_recipro_core(snapshot)
+            ffi::init_recipro_core(snapshot)
         };
 
         self.vm.replace(vm);
@@ -60,13 +64,13 @@ impl Snapshot {
         }
     }
 
-    pub fn snapshot(&self) -> SnapshotData {
-        unsafe { take_snapshot(*self.vm.borrow().deref()) }
+    pub fn snapshot(&self) -> ffi::SnapshotData {
+        unsafe { ffi::take_snapshot(*self.vm.borrow().deref()) }
     }
 
     pub fn delete_snapshot(data_ptr: *const u8) {
         unsafe {
-            delete_snapshot(data_ptr);
+            ffi::delete_snapshot(data_ptr);
         }
     }
 }
@@ -77,7 +81,7 @@ impl Engine for Snapshot {
     }
 
     fn init(&self) {
-        let vm = unsafe { init_recipro_snapshot() };
+        let vm = unsafe { ffi::init_recipro_snapshot() };
         self.vm.replace(vm);
     }
 }
@@ -85,7 +89,7 @@ impl Engine for Snapshot {
 impl<'a> Drop for Isolate<'a> {
     fn drop(&mut self) {
         unsafe {
-            dispose(*self.vm.get_mut());
+            ffi::dispose(*self.vm.get_mut());
         }
     }
 }
@@ -93,7 +97,7 @@ impl<'a> Drop for Isolate<'a> {
 impl Drop for Snapshot {
     fn drop(&mut self) {
         unsafe {
-            dispose(*self.vm.get_mut());
+            ffi::dispose(*self.vm.get_mut());
         }
     }
 }

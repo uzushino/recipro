@@ -2,28 +2,31 @@ use std::borrow::Cow;
 use std::ffi::CStr;
 use std::mem::ManuallyDrop;
 use std::ops::Deref;
-use std::os::raw::c_char;
 
 use crate::{Engine, Platform};
 
-#[link(name = "binding", kind = "static")]
-extern "C" {
-    fn v8_init();
-    fn v8_dispose();
-    fn v8_shutdown_platform();
-    fn v8_get_version() -> *const c_char;
+mod ffi {
+    use libc::c_char;
+
+    #[link(name = "binding", kind = "static")]
+    extern "C" {
+        pub fn v8_init();
+        pub fn v8_dispose();
+        pub fn v8_shutdown_platform();
+        pub fn v8_get_version() -> *const c_char;
+    }
 }
 
 impl<'a> Platform<'a> {
     pub fn version() -> Cow<'static, str> {
         unsafe {
-            let version = v8_get_version() as *mut _;
+            let version = ffi::v8_get_version() as *mut _;
             CStr::from_ptr(version).to_string_lossy()
         }
     }
 
     pub fn new(engine: &'a Engine) -> Platform {
-        unsafe { v8_init() }
+        unsafe { ffi::v8_init() }
 
         Platform {
             isolate: ManuallyDrop::new(engine),
@@ -40,8 +43,8 @@ impl<'a> Platform<'a> {
 
     pub fn shutdown() {
         unsafe {
-            v8_dispose();
-            v8_shutdown_platform();
+            ffi::v8_dispose();
+            ffi::v8_shutdown_platform();
         }
     }
 }
