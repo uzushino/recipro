@@ -1,8 +1,6 @@
 extern crate failure;
 extern crate recipro_engine;
 
-use std::ffi::CString;
-
 use recipro_engine::{ Engine, Isolate, Platform, Snapshot, module::Module };
 
 const SNAPSHOT_PATH: &'static str = "/tmp/snapshot";
@@ -35,17 +33,22 @@ fn main() -> Result<(), failure::Error> {
     platform.engine_start();
 
     let vm = engine.core();
-    let name = CString::new("a.js")?;
-    let script = CString::new("import b from 'b.js'\nRecipro.log(b());")?;
-    let mod_a = Module::compile(vm, name.as_ptr(), script.as_ptr());
-    
-    let name = CString::new("b.js")?;
-    let script = CString::new("export default function () { return 'this is b.js'; }")?;
-    let mod_b = Module::compile(vm, name.as_ptr(), script.as_ptr());
-    let specifier = &mut |_s, _id| mod_b;
 
-    Module::instantiate(vm, mod_a, specifier);
-    Module::evaluate(vm, mod_a);
+    let mod_a = Module::new(vm);
+
+    mod_a.compile(
+        "a.js", 
+        "import b from 'b.js'\nRecipro.log(a + 'Rust');\nRecipro.log(b());"
+    )?;
+
+    let mod_b = Module::new(vm);
+    mod_b.compile(
+        "b.js", 
+        "export default function () { return 'this is b.js'; };"
+    )?;
+
+    mod_a.instantiate(&mut |_s, _id| mod_b.module_id());
+    mod_a.evaluate();
 
     Ok(())
 }
