@@ -113,7 +113,6 @@ impl Engine for Snapshot {
 
 impl<'a> Drop for Isolate<'a> {
     fn drop(&mut self) {
-        println!("Isolate drop");
         unsafe {
             ffi::dispose(*self.vm.get_mut());
         }
@@ -123,7 +122,6 @@ impl<'a> Drop for Isolate<'a> {
 impl Drop for Snapshot {
     fn drop(&mut self) {
         unsafe {
-            println!("Snapshot drop");
             ffi::dispose(*self.vm.get_mut());
         }
     }

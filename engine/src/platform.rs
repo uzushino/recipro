@@ -3,7 +3,7 @@ use std::mem::ManuallyDrop;
 use std::borrow::Cow;
 use std::ffi::CStr;
 
-use crate::{Engine, Platform, Isolate, Snapshot};
+use crate::{Engine, Platform};
 
 mod ffi {
     use libc::c_char;
@@ -39,7 +39,6 @@ impl<'a> Platform {
     }
 
     pub fn init() {
-        println!("init");
         unsafe { ffi::v8_init() }
     }
 
@@ -54,11 +53,9 @@ impl<'a> Platform {
 impl Drop for Platform {
     fn drop(&mut self)  {
         unsafe {
-            println!("ManyallyDrop");
             ManuallyDrop::drop(&mut self.engines)
         }
 
-        println!("Shotdown");
         Self::shutdown();
     }
 }
