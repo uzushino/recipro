@@ -1,9 +1,9 @@
+use std::rc::Rc;
+use std::mem::ManuallyDrop;
 use std::borrow::Cow;
 use std::ffi::CStr;
-use std::mem::ManuallyDrop;
-use std::ops::Deref;
 
-use crate::{Engine, Platform};
+use crate::{Engine, Platform, Isolate, Snapshot};
 
 mod ffi {
     use libc::c_char;
@@ -17,7 +17,7 @@ mod ffi {
     }
 }
 
-impl<'a> Platform<'a> {
+impl<'a> Platform {
     pub fn version() -> Cow<'static, str> {
         unsafe {
             let version = ffi::v8_get_version() as *mut _;
@@ -25,20 +25,22 @@ impl<'a> Platform<'a> {
         }
     }
 
-    pub fn new(engine: &'a Engine) -> Platform {
-        unsafe { ffi::v8_init() }
+    pub fn new() -> Platform {
+        Self::init();
 
         Platform {
-            isolate: ManuallyDrop::new(engine),
+            engines: ManuallyDrop::new(Vec::new()),
         }
     }
 
-    pub fn engine_start(&self) {
-        self.isolate.init();
+    pub fn add_engine(&mut self, engine: Rc<Engine>)  {
+        engine.init();
+        self.engines.push(engine);
     }
 
-    pub fn isolate(&self) -> &'a Engine {
-        *self.isolate.deref()
+    pub fn init() {
+        println!("init");
+        unsafe { ffi::v8_init() }
     }
 
     pub fn shutdown() {
@@ -49,11 +51,14 @@ impl<'a> Platform<'a> {
     }
 }
 
-impl<'a> Drop for Platform<'a> {
-    fn drop(&mut self) {
+impl Drop for Platform {
+    fn drop(&mut self)  {
         unsafe {
-            ManuallyDrop::drop(&mut self.isolate);
+            println!("ManyallyDrop");
+            ManuallyDrop::drop(&mut self.engines)
         }
-        //Self::shutdown();
+
+        println!("Shotdown");
+        Self::shutdown();
     }
 }

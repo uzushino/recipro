@@ -1,6 +1,7 @@
 extern crate failure;
 extern crate libc;
 
+use std::rc::Rc;
 use std::cell::RefCell;
 use std::ffi::CString;
 use std::os::raw::c_char;
@@ -18,11 +19,12 @@ extern "C" {
 
 pub enum ReciproVM {}
 
-pub struct Platform<'a> {
-    isolate: ManuallyDrop<&'a Engine>,
+pub struct Platform {
+    engines: ManuallyDrop<Vec<Rc<Engine>>>,
 }
 
 pub trait Engine {
+    fn new() -> Self where Self: Sized;
     fn core(&self) -> *mut ReciproVM;
     fn init(&self);
     fn eval<'a>(&self, js: &'a str) -> Result<(), failure::Error> {

@@ -38,16 +38,14 @@ mod ffi {
     }
 }
 
-impl<'a> Isolate<'a> {
-    pub fn new(snapshot: Option<&[u8]>) -> Isolate {
+impl<'a> Engine for Isolate<'a> {
+    fn new() -> Isolate<'a> where Self: Sized {
         Isolate {
-            snapshot_data: snapshot,
+            snapshot_data: None,
             vm: RefCell::new(std::ptr::null_mut()),
         }
     }
-}
 
-impl<'a> Engine for Isolate<'a> {
     fn core(&self) -> *mut ReciproVM {
         *self.vm.borrow_mut()
     }
@@ -62,20 +60,26 @@ impl<'a> Engine for Isolate<'a> {
             },
             None => ffi::SnapshotData::default()
         };
+
         let vm = unsafe {
             ffi::init_recipro_core(snapshot)
         };
+
         self.vm.replace(vm);
     }
 }
 
-impl Snapshot {
-    pub fn new() -> Snapshot {
-        Snapshot {
-            vm: RefCell::new(std::ptr::null_mut()),
+impl<'a> Isolate<'a> {
+    pub fn load_snapshot(&mut self, snapshot: &[u8]) {
+        unsafe {
+            let b = snapshot.as_ptr();
+            let data: &'a [u8] = std::slice::from_raw_parts(b, snapshot.len());
+            self.snapshot_data = Some(data);
         }
     }
+}
 
+impl Snapshot {
     pub fn snapshot(&self) -> ffi::SnapshotData {
         unsafe { ffi::take_snapshot(*self.vm.borrow().deref()) }
     }
@@ -88,18 +92,28 @@ impl Snapshot {
 }
 
 impl Engine for Snapshot {
+    fn new() -> Snapshot where Self: Sized {
+        Snapshot {
+            vm: RefCell::new(std::ptr::null_mut()),
+        }
+    }
+
     fn core(&self) -> *mut ReciproVM {
         *self.vm.borrow_mut()
     }
 
     fn init(&self) {
-        let vm = unsafe { ffi::init_recipro_snapshot() };
+        let vm = unsafe { 
+            ffi::init_recipro_snapshot() 
+        };
+
         self.vm.replace(vm);
     }
 }
 
 impl<'a> Drop for Isolate<'a> {
     fn drop(&mut self) {
+        println!("Isolate drop");
         unsafe {
             ffi::dispose(*self.vm.get_mut());
         }
@@ -109,6 +123,7 @@ impl<'a> Drop for Isolate<'a> {
 impl Drop for Snapshot {
     fn drop(&mut self) {
         unsafe {
+            println!("Snapshot drop");
             ffi::dispose(*self.vm.get_mut());
         }
     }
@@ -117,18 +132,55 @@ impl Drop for Snapshot {
 
 #[cfg(test)]
 mod test {
-  use crate::Platform;
-  use crate::Isolate;
+    use std::fs;
+    use std::rc::Rc;
 
-  use super::*;
+    use crate::Platform;
+    use crate::Isolate;
 
-  #[test]
-  fn evaluate_script() {
-    let engine = Isolate::new(None);
-    let platform = Platform::new(&engine);
-    platform.engine_start();
+    use super::*;
 
-    let r = engine.eval("a = 1; Recipro.log(a);");
-    assert!(r.is_ok())
-  }
+    #[test]
+    fn evaluate_script() {
+        let mut platform: Platform = Platform::new();
+        let engine = Rc::new(Isolate::new());
+        platform.add_engine(engine.clone());
+
+        let r = engine.eval("a = 1;");
+
+        assert!(r.is_ok());
+    }
+
+    const SNAPSHOT_PATH: &'static str = "/tmp/snapshot";
+
+    fn write_snapshot(platform: &mut Platform, script: &str) -> Result<(), failure::Error> {
+        let engine = std::rc::Rc::new(Snapshot::new());
+        platform.add_engine(engine.clone());
+        engine.eval(script)?;
+
+        let snapshot = engine.snapshot();
+        if snapshot.data_size > 0 {
+            std::fs::write(SNAPSHOT_PATH, snapshot.as_slice())?;
+            Snapshot::delete_snapshot(snapshot.data_ptr);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn snapshot_evaluate() {
+        let mut platform: Platform = Platform::new();
+        write_snapshot(&mut platform, "a = 'Hello, '").unwrap();
+
+        let mut engine = Rc::new(Isolate::new());
+        let s = fs::read(SNAPSHOT_PATH).unwrap();
+        let m = Rc::get_mut(&mut engine).unwrap();
+        (*m).load_snapshot(s.as_slice());
+
+        platform.add_engine(engine.clone());
+
+        let r = engine.eval("a = 1;");
+
+        assert!(r.is_ok());
+    }
 }
