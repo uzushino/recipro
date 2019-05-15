@@ -28,14 +28,13 @@ fn main() -> Result<(), failure::Error> {
     write_snapshot("a = 'Hello, '")?;
 
     let s = std::fs::read(SNAPSHOT_PATH)?;
-    let engine = Isolate::new(s.as_slice());
+    let engine = Isolate::new(Some(s.as_slice()));
     let platform = Platform::new(&engine);
     platform.engine_start();
 
     let vm = engine.core();
 
     let mod_a = Module::new(vm);
-
     mod_a.compile(
         "a.js", 
         "import b from 'b.js'\nRecipro.log(a + 'Rust');\nRecipro.log(b());"

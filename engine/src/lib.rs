@@ -25,8 +25,8 @@ pub struct Platform<'a> {
 pub trait Engine {
     fn core(&self) -> *mut ReciproVM;
     fn init(&self);
-    fn eval(&self, js: String) -> Result<(), failure::Error> {
-        let script = CString::new(js.as_str())?;
+    fn eval<'a>(&self, js: &'a str) -> Result<(), failure::Error> {
+        let script = CString::new(js)?;
         unsafe {
             eval(self.core(), script.as_ptr());
         }
@@ -35,7 +35,7 @@ pub trait Engine {
 }
 
 pub struct Isolate<'a> {
-    snapshot_data: &'a [u8],
+    snapshot_data: Option<&'a [u8]>,
     vm: RefCell<*mut ReciproVM>,
 }
 

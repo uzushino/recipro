@@ -12,6 +12,15 @@ mod ffi {
         pub data_size: usize,
     }
 
+    impl Default for SnapshotData {
+        fn default() -> Self {
+            SnapshotData {
+                data_ptr: std::ptr::null(),
+                data_size: 0,
+            }
+        }
+    }
+
     impl SnapshotData {
         pub fn as_slice<'a>(&self) -> &'a [u8] {
             unsafe { std::slice::from_raw_parts(self.data_ptr, self.data_size) }
@@ -30,7 +39,7 @@ mod ffi {
 }
 
 impl<'a> Isolate<'a> {
-    pub fn new(snapshot: &[u8]) -> Isolate {
+    pub fn new(snapshot: Option<&[u8]>) -> Isolate {
         Isolate {
             snapshot_data: snapshot,
             vm: RefCell::new(std::ptr::null_mut()),
@@ -44,15 +53,18 @@ impl<'a> Engine for Isolate<'a> {
     }
 
     fn init(&self) {
+        let snapshot = match self.snapshot_data {
+            Some(snapshot) => {
+                ffi::SnapshotData {
+                    data_ptr: snapshot.as_ref().as_ptr(),
+                    data_size: snapshot.len(),
+                }
+            },
+            None => ffi::SnapshotData::default()
+        };
         let vm = unsafe {
-            let snapshot = ffi::SnapshotData {
-                data_ptr: self.snapshot_data.as_ref().as_ptr(),
-                data_size: self.snapshot_data.len(),
-            };
-
             ffi::init_recipro_core(snapshot)
         };
-
         self.vm.replace(vm);
     }
 }
@@ -100,4 +112,23 @@ impl Drop for Snapshot {
             ffi::dispose(*self.vm.get_mut());
         }
     }
+}
+
+
+#[cfg(test)]
+mod test {
+  use crate::Platform;
+  use crate::Isolate;
+
+  use super::*;
+
+  #[test]
+  fn evaluate_script() {
+    let engine = Isolate::new(None);
+    let platform = Platform::new(&engine);
+    platform.engine_start();
+
+    let r = engine.eval("a = 1; Recipro.log(a);");
+    assert!(r.is_ok())
+  }
 }
