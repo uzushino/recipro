@@ -138,22 +138,33 @@ mod test {
 
     use super::*;
 
+    use std::sync::{Once, ONCE_INIT};
+
+    static INIT: Once = ONCE_INIT;
+
+    pub fn init_platform() {
+        INIT.call_once(|| {
+            let platform: Platform = Platform::new();
+            std::mem::forget(platform)
+        });
+    }
+
     #[test]
     fn evaluate_script() {
-        let mut platform: Platform = Platform::new();
-        let engine = Rc::new(Isolate::new());
-        platform.add_engine(engine.clone());
+        init_platform();
+
+        let engine = Isolate::new();
+        engine.init();
 
         let r = engine.eval("a = 1;");
-
         assert!(r.is_ok());
     }
 
     const SNAPSHOT_PATH: &'static str = "/tmp/snapshot";
 
-    fn write_snapshot(platform: &mut Platform, script: &str) -> Result<(), failure::Error> {
-        let engine = std::rc::Rc::new(Snapshot::new());
-        platform.add_engine(engine.clone());
+    fn write_snapshot(script: &str) -> Result<(), failure::Error> {
+        let engine = Snapshot::new();
+        engine.init();
         engine.eval(script)?;
 
         let snapshot = engine.snapshot();
@@ -166,19 +177,22 @@ mod test {
     }
 
     #[test]
-    fn snapshot_evaluate() {
-        let mut platform: Platform = Platform::new();
-        write_snapshot(&mut platform, "a = 'Hello, '").unwrap();
+    fn snapshot_evaluate() -> Result<(), failure::Error> {
+        init_platform();
+        
+        write_snapshot("a = 'Hello, '")?;
 
         let mut engine = Rc::new(Isolate::new());
-        let s = fs::read(SNAPSHOT_PATH).unwrap();
+        engine.init();
+
+        let s = fs::read(SNAPSHOT_PATH)?;
         let m = Rc::get_mut(&mut engine).unwrap();
         (*m).load_snapshot(s.as_slice());
-
-        platform.add_engine(engine.clone());
 
         let r = engine.eval("a = 1;");
 
         assert!(r.is_ok());
+
+        Ok(())
     }
 }
