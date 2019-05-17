@@ -1,7 +1,14 @@
+use std::ffi::CString;
 use std::cell::RefCell;
 use std::ops::Deref;
 
+use libc::{ c_void, c_int, c_char };
+
 use crate::{Engine, Isolate, ReciproVM, Snapshot};
+
+pub type ModId = i32;
+type Callback = extern "C" fn(*mut c_void, *mut c_char, c_int) -> c_int;
+type Closure<'a> = dyn FnMut(*mut c_char, c_int) -> c_int + 'a;
 
 mod ffi {
     use super::*;
@@ -35,10 +42,14 @@ mod ffi {
         pub fn dispose(vm: *mut ReciproVM);
         pub fn take_snapshot(vm: *mut ReciproVM) -> SnapshotData;
         pub fn delete_snapshot(ptr: *const u8);
+
+        pub fn module_compile(vm: *mut ReciproVM, filename: *const u8, script: *const c_char) -> ModId;
+        pub fn module_instantiate(vm: *mut ReciproVM, id: ModId, data: *mut c_void, f: Callback);
+        pub fn module_evaluate(vm: *mut ReciproVM, id: ModId) -> *const ModId;
     }
 }
 
-impl<'a> Engine for Isolate<'a> {
+impl<'a> Engine for Isolate<'a> { 
     fn new() -> Isolate<'a> where Self: Sized {
         Isolate {
             snapshot_data: None,
@@ -75,6 +86,62 @@ impl<'a> Isolate<'a> {
             let b = snapshot.as_ptr();
             let data: &'a [u8] = std::slice::from_raw_parts(b, snapshot.len());
             self.snapshot_data = Some(data);
+        }
+    }
+
+    pub fn compile_from_script(&self, filename: &str) -> Result<ModId, failure::Error> {
+        let source = std::fs::read_to_string(filename)?;
+        let script = CString::new(source)?;
+        let id = unsafe { 
+            ffi::module_compile(
+                self.core(), 
+                filename.as_ptr(), 
+                script.as_ptr()
+            ) 
+        };
+
+        Ok(id)
+    }
+
+    pub fn compile(&self, filename: &str, script: &str) -> Result<ModId, failure::Error> {
+        let script = CString::new(script.as_bytes())?;
+        let id = unsafe { 
+            ffi::module_compile(
+                self.core(), 
+                filename.as_ptr(), 
+                script.as_ptr()
+            ) 
+        };
+
+        Ok(id)
+    }
+
+    pub fn instantiate(&self, id: ModId, closure: &mut Closure) {
+        let mut closure_ptr = Box::new(closure);
+
+        unsafe { 
+        ffi::module_instantiate(
+            self.core(), 
+            id, 
+            &mut *closure_ptr as *mut _  as *mut c_void, 
+            Self::resolve_callback
+        );
+        };
+    }
+
+    pub fn evaluate(&self, id: ModId) {
+        unsafe { 
+            ffi::module_evaluate(
+                self.core(), 
+                id
+            ) 
+        };
+    }
+
+    extern "C" fn resolve_callback(data: *mut c_void, specifier: *mut c_char, id: c_int) -> c_int {
+        unsafe {
+        let closure: &mut &mut Closure =  &mut *(data as *mut _);
+        closure(specifier, id)
         }
     }
 }

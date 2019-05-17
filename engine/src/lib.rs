@@ -8,7 +8,6 @@ use std::os::raw::c_char;
 
 pub mod isolate;
 pub mod platform;
-pub mod module;
 
 use std::mem::ManuallyDrop;
 

@@ -6,21 +6,6 @@
 
 using namespace recipro;
 
-ReciproVM* init_recipro_core(recipro::SnapshotData snapshot) {
-  ReciproVM* vm = new ReciproVM {};
-
-  vm->isolate_ = std::make_shared<recipro::Isolate>(snapshot);
-  vm->isolate_->New();
-
-  vm->isolate_->RunIsolateScope([vm](auto isolate) {
-    auto context = v8::Context::New(isolate);
-
-    vm->isolate_->Reset(context);
-  });
-
-  return vm;
-}
-
 void SetGlobalObject(v8::Isolate *isolate, v8::Local<v8::Context> context) {
   v8::HandleScope handle_scope(isolate);
   v8::Context::Scope context_scope(context);
@@ -42,6 +27,23 @@ void SetGlobalObject(v8::Isolate *isolate, v8::Local<v8::Context> context) {
     log_val
   );
   CHECK(result.FromJust());
+}
+
+ReciproVM* init_recipro_core(recipro::SnapshotData snapshot) {
+  ReciproVM* vm = new ReciproVM {};
+
+  vm->isolate_ = std::make_shared<recipro::Isolate>(snapshot);
+  vm->isolate_->New();
+
+  vm->isolate_->RunIsolateScope([vm](auto isolate) {
+    auto context = v8::Context::New(isolate);
+
+    vm->isolate_->Reset(context);
+
+    SetGlobalObject(isolate, context);
+  });
+
+  return vm;
 }
 
 ReciproVM* init_recipro_snapshot() {
