@@ -1,10 +1,10 @@
 export PATH += $(shell pwd)/depot_tools/
 
-depot_tools:
-	git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-
 build: depot_tools
 	python build.py
+
+depot_tools:
+	git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
 
 clean:
 	cargo clean
