@@ -18,7 +18,7 @@ fn main() -> Result<(), failure::Error> {
     )?;
 
     engine.instantiate(mod_a, &mut |_s, _id| mod_b);
-    engine.evaluate(mod_a);
+    engine.evaluate(mod_a)?;
 
     Ok(())
 }

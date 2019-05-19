@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 #include "include/v8.h"
 #include "include/libplatform/libplatform.h"
 #include "src/base/logging.h"

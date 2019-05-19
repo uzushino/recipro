@@ -129,13 +129,14 @@ impl<'a> Isolate<'a> {
         };
     }
 
-    pub fn evaluate(&self, id: ModId) {
+    pub fn evaluate(&self, id: ModId) -> Result<(), failure::Error> {
         unsafe { 
             ffi::module_evaluate(
                 self.core(), 
                 id
             ) 
         };
+        Ok(())
     }
 
     extern "C" fn resolve_callback(data: *mut c_void, specifier: *mut c_char, id: c_int) -> c_int {
@@ -259,6 +260,28 @@ mod test {
         let r = engine.eval("a = 1;");
 
         assert!(r.is_ok());
+
+        Ok(())
+    }
+
+    #[test]
+    fn evaluate_module() -> Result<(), failure::Error> {
+        init_platform();
+
+        let engine = Isolate::new();
+        engine.init();
+
+        let mod_a = engine.compile(
+            "a.js", 
+            "import b from 'b.js'\nRecipro.log('Rust');\n Recipro.log(b());"
+        )?;
+        let mod_b = engine.compile(
+            "b.js", 
+            "export default function () { return 'this is b.js'; };"
+        )?;
+
+        engine.instantiate(mod_a, &mut |_s, _id| mod_b);
+        engine.evaluate(mod_a)?;
 
         Ok(())
     }
