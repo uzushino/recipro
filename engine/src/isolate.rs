@@ -224,7 +224,7 @@ mod test {
         let engine = Isolate::new();
         engine.init();
 
-        let r = engine.eval("a = 1;");
+        let r = engine.execute_script("a = 1;");
         assert!(r.is_ok());
     }
 
@@ -233,7 +233,7 @@ mod test {
     fn write_snapshot(script: &str) -> Result<(), failure::Error> {
         let engine = Snapshot::new();
         engine.init();
-        engine.eval(script)?;
+        engine.execute_script(script)?;
 
         let snapshot = engine.snapshot();
         if snapshot.data_size > 0 {
@@ -257,7 +257,7 @@ mod test {
         let m = Rc::get_mut(&mut engine).unwrap();
         (*m).load_snapshot(s.as_slice());
 
-        let r = engine.eval("a = 1;");
+        let r = engine.execute_script("a = 1;");
 
         assert!(r.is_ok());
 

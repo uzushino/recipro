@@ -26,11 +26,17 @@ pub trait Engine {
     fn new() -> Self where Self: Sized;
     fn core(&self) -> *mut ReciproVM;
     fn init(&self);
-    fn eval<'a>(&self, js: &'a str) -> Result<(), failure::Error> {
+    fn execute_script<'a>(&self, js: &'a str) -> Result<(), failure::Error> {
         let script = CString::new(js)?;
         unsafe {
             eval(self.core(), script.as_ptr());
         }
+        Ok(())
+    }
+    fn run_script<'a>(&self, script: &'a str) -> Result<(), failure::Error> {
+        let script = std::fs::read_to_string(script)?;
+        self.execute_script(script.as_str())?;
+
         Ok(())
     }
 }
