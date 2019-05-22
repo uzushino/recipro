@@ -27,6 +27,15 @@ void SetGlobalObject(v8::Isolate *isolate, v8::Local<v8::Context> context) {
     log_val
   );
   CHECK(result.FromJust());
+  
+  auto readfile_tmpl = v8::FunctionTemplate::New(isolate, ReadfileCallback);
+  auto readfile_val = readfile_tmpl->GetFunction(context).ToLocalChecked();
+  result = global_val->Set(
+    context,
+    v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), "readFile", v8::NewStringType::kNormal).ToLocalChecked(),
+    readfile_val
+  );
+  CHECK(result.FromJust());
 }
 
 ReciproVM* init_recipro_core(recipro::SnapshotData snapshot) {

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fstream>
 #include <functional>
 #include <map>
 #include <string>
@@ -23,6 +24,34 @@ void recipro::LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::String::Utf8Value value(isolate, arg);
 
   printf("Logged: %s\n", *value);
+}
+
+void recipro::ReadfileCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  if (args.Length() < 1) return;
+
+  v8::Isolate* isolate = args.GetIsolate();
+  v8::HandleScope scope(isolate);
+
+  v8::Local<v8::Value> arg = args[0];
+  v8::String::Utf8Value value(isolate, arg);
+
+  int size = 0;
+  const char *file = *value;
+
+  std::ifstream fin;
+  fin.open(file);
+
+  std::stringstream sstream;
+  sstream << fin.rdbuf();
+  fin.close();
+  
+  std::string data(sstream.str());
+
+  v8::Local<v8::ArrayBuffer> ab = 
+    v8::ArrayBuffer::New(isolate, (void *)data.c_str(), data.length());
+
+
+  args.GetReturnValue().Set(ab);
 }
 
 void Isolate::New() {

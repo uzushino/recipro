@@ -1,3 +1,4 @@
 /target
-
+pyodide*
+node_modules*
 .vscode
