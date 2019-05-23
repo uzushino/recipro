@@ -28,12 +28,21 @@ void SetGlobalObject(v8::Isolate *isolate, v8::Local<v8::Context> context) {
   );
   CHECK(result.FromJust());
   
-  auto readfile_tmpl = v8::FunctionTemplate::New(isolate, ReadfileCallback);
+  auto readfile_tmpl = v8::FunctionTemplate::New(isolate, ReadFileCallback);
   auto readfile_val = readfile_tmpl->GetFunction(context).ToLocalChecked();
   result = global_val->Set(
     context,
     v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), "readFile", v8::NewStringType::kNormal).ToLocalChecked(),
     readfile_val
+  );
+  CHECK(result.FromJust());
+  
+  auto runscript_tmpl = v8::FunctionTemplate::New(isolate, RunScriptCallback);
+  auto runscript_val = runscript_tmpl->GetFunction(context).ToLocalChecked();
+  result = global_val->Set(
+    context,
+    v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), "runScript", v8::NewStringType::kNormal).ToLocalChecked(),
+    runscript_val
   );
   CHECK(result.FromJust());
 }
