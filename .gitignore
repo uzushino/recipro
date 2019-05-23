@@ -1,6 +1,4 @@
 /target
 .vscode
 scripts/pyodide
-!scripts/pyodide/pyodide.js
-!scripts/pyodide/pyodide.asm.js
-!scripts/pyodide/pyodide.asm.data.js
+!scripts/pyodide/.keep
