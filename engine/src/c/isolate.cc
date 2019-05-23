@@ -131,9 +131,11 @@ bool Isolate::Eval(const char *javascript) {
     return false;
   }
 
+/*
   auto ret = result.ToLocalChecked();
   v8::String::Utf8Value utf8(isolate_, ret);
   printf("Result: %s\n", *utf8);
+*/
 
   return true;
 }
