@@ -28,7 +28,7 @@ void recipro::LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
   printf("Logged: %s\n", *value);
 }
 
-void recipro::ReadfileCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void recipro::ReadFileCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
   if (args.Length() < 1) return;
 
   v8::Isolate* isolate = args.GetIsolate();
@@ -45,6 +45,36 @@ void recipro::ReadfileCallback(const v8::FunctionCallbackInfo<v8::Value>& args) 
       v8::ArrayBuffer::New(isolate, (void *)source.c_str(), source.length());
 
     args.GetReturnValue().Set(ab);
+  }
+}
+
+void recipro::RunScriptCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  if (args.Length() < 1) return;
+
+  v8::Isolate* isolate = args.GetIsolate();
+  v8::HandleScope scope(isolate);
+  auto context = isolate->GetCurrentContext();
+  v8::Context::Scope context_scope(context);
+
+  v8::Local<v8::Value> arg = args[0];
+  v8::String::Utf8Value value(isolate, arg);
+
+  bool exists;
+  std::string file = v8::internal::ReadFile(*value, &exists);
+
+  if (exists) {
+    auto source =
+        v8::String::NewFromUtf8(isolate, file.c_str(), v8::NewStringType::kNormal).ToLocalChecked(); 
+
+    v8::TryCatch trycatch(isolate);
+    auto script = v8::Script::Compile(context, source).ToLocalChecked();
+    auto result = script->Run(context);
+
+    if (result.IsEmpty()) {
+      v8::Local<v8::Value> exception = trycatch.Exception();
+      v8::String::Utf8Value exception_str(isolate, exception);
+      printf("Error: %s\n", *exception_str);
+    }
   }
 }
 
@@ -101,9 +131,11 @@ bool Isolate::Eval(const char *javascript) {
     return false;
   }
 
+/*
   auto ret = result.ToLocalChecked();
   v8::String::Utf8Value utf8(isolate_, ret);
   printf("Result: %s\n", *utf8);
+*/
 
   return true;
 }

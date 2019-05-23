@@ -1,24 +1,32 @@
+use std::env;
 use std::rc::Rc;
 use recipro_engine::{ Engine, Isolate, Platform };
 
 fn main() -> Result<(), failure::Error> {
-    println!("version: {}", Platform::version());
-
     let mut platform: Platform = Platform::new();
     let engine = Rc::new(Isolate::new());
     platform.add_engine(engine.clone());
     
-    let mod_a = engine.compile(
-        "a.js", 
-        "import b from 'b.js'\nRecipro.log('Rust');\n Recipro.log(b());"
-    )?;
-    let mod_b = engine.compile(
-        "b.js", 
-        "export default function () { return 'this is b.js'; };"
-    )?;
+    let scripts_dir = env::current_dir()?
+        .join("scripts");
+    let pyodide_dir = scripts_dir
+        .join("pyodide");
 
-    engine.instantiate(mod_a, &mut |_s, _id| mod_b);
-    engine.evaluate(mod_a)?;
+    let s = std::fs::read_to_string(scripts_dir.join("main.js"))?;
+    engine.execute_script(s.as_str())?;
+
+    let s = format!("self.languagePluginUrl = '{}/';",  pyodide_dir.to_string_lossy());
+    engine.execute_script(s.as_str())?;
+
+    let s = std::fs::read_to_string(pyodide_dir.join("pyodide.js"))?;
+    engine.execute_script(s.as_str())?;
+
+    engine.execute_script(r#"
+languagePluginLoader.then(() => {
+  console.log(pyodide.runPython('import sys\nsys.version'));
+})
+.catch(e => Recipro.log(e.stack));
+"#)?;
 
     Ok(())
 }

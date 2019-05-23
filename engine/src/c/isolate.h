@@ -33,11 +33,13 @@ namespace recipro {
   typedef std::map<std::string, int> module_map;
 
   void LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args); 
-  void ReadfileCallback(const v8::FunctionCallbackInfo<v8::Value>& args); 
+  void ReadFileCallback(const v8::FunctionCallbackInfo<v8::Value>& args); 
+  void RunScriptCallback(const v8::FunctionCallbackInfo<v8::Value>& args); 
 
   static intptr_t external_references[] = {
     reinterpret_cast<intptr_t>(LogCallback),
-    reinterpret_cast<intptr_t>(ReadfileCallback),
+    reinterpret_cast<intptr_t>(ReadFileCallback),
+    reinterpret_cast<intptr_t>(RunScriptCallback),
     0
   };
 
