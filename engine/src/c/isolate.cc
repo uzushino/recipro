@@ -9,6 +9,8 @@
 #include <vector>
 
 #include "src/base/logging.h"
+#include "src/utils.h"
+
 #include "isolate.h"
 #include "binding.h"
 
@@ -35,23 +37,15 @@ void recipro::ReadfileCallback(const v8::FunctionCallbackInfo<v8::Value>& args) 
   v8::Local<v8::Value> arg = args[0];
   v8::String::Utf8Value value(isolate, arg);
 
-  int size = 0;
-  const char *file = *value;
+  bool exists;
+  std::string source = v8::internal::ReadFile(*value, &exists);
 
-  std::ifstream fin;
-  fin.open(file);
+  if (exists) {
+    v8::Local<v8::ArrayBuffer> ab = 
+      v8::ArrayBuffer::New(isolate, (void *)source.c_str(), source.length());
 
-  std::stringstream sstream;
-  sstream << fin.rdbuf();
-  fin.close();
-  
-  std::string data(sstream.str());
-
-  v8::Local<v8::ArrayBuffer> ab = 
-    v8::ArrayBuffer::New(isolate, (void *)data.c_str(), data.length());
-
-
-  args.GetReturnValue().Set(ab);
+    args.GetReturnValue().Set(ab);
+  }
 }
 
 void Isolate::New() {
