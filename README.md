@@ -30,7 +30,7 @@ engine.execute_script(r#"
 languagePluginLoader.then(() => {
   console.log(pyodide.runPython('import sys\nsys.version'));
 })
-.catch(e => Recipro.log(e.stack));
+.catch(e => console.log(e.stack));
 "#);
 
 $ cargo run 
