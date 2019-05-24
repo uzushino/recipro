@@ -25,7 +25,7 @@ void recipro::LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Local<v8::Value> arg = args[0];
   v8::String::Utf8Value value(isolate, arg);
 
-  printf("Logged: %s\n", *value);
+  printf("%s\n", *value);
 }
 
 void recipro::ReadFileCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {

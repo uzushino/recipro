@@ -40,7 +40,7 @@ languagePluginLoader = new Promise((resolve, reject) => {
     // `preloadedWasm` dictionary.
 
     let promise = new Promise((resolve) => resolve());
-    let FS = pyodide._module.FS;
+    let FS = Module.FS;
 
     function recurseDir(rootpath) {
       let dirs;
@@ -181,7 +181,7 @@ languagePluginLoader = new Promise((resolve, reject) => {
             self.pyodide.loadedPackages[package] = toLoad[package];
           }
           delete self.pyodide._module.monitorRunDependencies;
-          self.removeEventListener('error', windowErrorHandler);
+          //** REMOVE self.removeEventListener('error', windowErrorHandler); */
           if (!isFirefox) {
             preloadWasm().then(() => {resolve(`Loaded ${packageList}`)});
           } else {
@@ -199,7 +199,7 @@ languagePluginLoader = new Promise((resolve, reject) => {
         loadPackagePromise = new Promise((resolve) => resolve());
         reject(err.message);
       };
-      self.addEventListener('error', windowErrorHandler);
+      /** self.addEventListener('error', windowErrorHandler); */
 
       for (let package in toLoad) {
         let scriptSrc;
@@ -339,6 +339,10 @@ languagePluginLoader = new Promise((resolve, reject) => {
     return true;
   };
 
+  /** ADD scripts/pyodide/package.json */
+  const packageJson = 
+    {"dependencies": {"scikit-learn": ["numpy", "scipy", "joblib"], "sympy": ["mpmath"], "pyparsing": [], "python-dateutil": [], "pluggy": [], "beautifulsoup4": ["soupsieve"], "mpmath": [], "more-itertools": [], "webencodings": [], "mne": ["numpy", "scipy"], "pytest": ["atomicwrites", "attrs", "more-itertools", "pluggy", "py", "setuptools"], "attrs": [], "networkx": ["decorator", "setuptools", "matplotlib", "numpy"], "nose": ["setuptools"], "pandas": ["numpy", "python-dateutil", "pytz"], "numpy": [], "atomicwrites": [], "bleach": ["setuptools", "webencodings"], "biopython": [], "py": [], "joblib": [], "decorator": [], "matplotlib": ["cycler", "kiwisolver", "numpy", "pyparsing", "python-dateutil", "pytz"], "docutils": [], "cycler": [], "kiwisolver": [], "scipy": ["numpy"], "pytz": [], "distlib": [], "micropip": ["distlib"], "html5lib": ["webencodings"], "Jinja2": ["MarkupSafe"], "setuptools": ["pyparsing"], "MarkupSafe": [], "soupsieve": [], "Pygments": [], "test": []}, "import_name_to_package_name": {"sklearn": "scikit-learn", "sklearn.calibration": "scikit-learn", "sklearn.cluster": "scikit-learn", "sklearn.compose": "scikit-learn", "sklearn.covariance": "scikit-learn", "sklearn.cross_decomposition": "scikit-learn", "sklearn.datasets": "scikit-learn", "sklearn.decomposition": "scikit-learn", "sklearn.discriminant_analysis": "scikit-learn", "sklearn.dummy": "scikit-learn", "sklearn.ensemble": "scikit-learn", "sklearn.exceptions": "scikit-learn", "sklearn.externals": "scikit-learn", "sklearn.feature_extraction": "scikit-learn", "sklearn.feature_selection": "scikit-learn", "sklearn.gaussian_process": "scikit-learn", "sklearn.impute": "scikit-learn", "sklearn.isotonic": "scikit-learn", "sklearn.kernel_approximation": "scikit-learn", "sklearn.kernel_ridge": "scikit-learn", "sklearn.linear_model": "scikit-learn", "sklearn.manifold": "scikit-learn", "sklearn.metrics": "scikit-learn", "sklearn.mixture": "scikit-learn", "sklearn.model_selection": "scikit-learn", "sklearn.multiclass": "scikit-learn", "sklearn.multioutput": "scikit-learn", "sklearn.naive_bayes": "scikit-learn", "sklearn.neighbors": "scikit-learn", "sklearn.neural_network": "scikit-learn", "sklearn.pipeline": "scikit-learn", "sklearn.preprocessing": "scikit-learn", "sklearn.random_projection": "scikit-learn", "sklearn.semi_supervised": "scikit-learn", "sklearn.svm": "scikit-learn", "sklearn.tree": "scikit-learn", "sklearn.utils": "scikit-learn", "sympy": "sympy", "pyparsing": "pyparsing", "dateutil": "python-dateutil", "pluggy": "pluggy", "bs4": "beautifulsoup4", "mpmath": "mpmath", "more_itertools": "more-itertools", "webencodings": "webencodings", "mne": "mne", "pytest": "pytest", "attr": "attrs", "networkx": "networkx", "networkx.algorithms": "networkx", "networkx.algorithms.approximation": "networkx", "networkx.algorithms.assortativity": "networkx", "networkx.algorithms.bipartite": "networkx", "networkx.algorithms.centrality": "networkx", "networkx.algorithms.chordal": "networkx", "networkx.algorithms.coloring": "networkx", "networkx.algorithms.community": "networkx", "networkx.algorithms.components": "networkx", "networkx.algorithms.connectivity": "networkx", "networkx.algorithms.flow": "networkx", "networkx.algorithms.isomorphism": "networkx", "networkx.algorithms.link_analysis": "networkx", "networkx.algorithms.node_classification": "networkx", "networkx.algorithms.operators": "networkx", "networkx.algorithms.shortest_paths": "networkx", "networkx.algorithms.traversal": "networkx", "networkx.algorithms.tree": "networkx", "networkx.classes": "networkx", "networkx.drawing": "networkx", "networkx.generators": "networkx", "networkx.linalg": "networkx", "networkx.readwrite": "networkx", "networkx.readwrite.json_graph": "networkx", "networkx.utils": "networkx", "nose": "nose", "pandas": "pandas", "numpy": "numpy", "atomicwrites": "atomicwrites", "bleach": "bleach", "Bio": "biopython", "py": "py", "py.code": "py", "joblib": "joblib", "decorator": "decorator", "matplotlib": "matplotlib", "mpl_toolkits": "matplotlib", "docutils": "docutils", "cycler": "cycler", "kiwisolver": "kiwisolver", "scipy": "scipy", "scipy.cluster": "scipy", "scipy.constants": "scipy", "scipy.fftpack": "scipy", "scipy.odr": "scipy", "scipy.sparse": "scipy", "scipy.interpolate": "scipy", "scipy.integrate": "scipy", "scipy.linalg": "scipy", "scipy.misc": "scipy", "scipy.ndimage": "scipy", "scipy.spatial": "scipy", "scipy.special": "scipy", "pytz": "pytz", "distlib": "distlib", "micropip": "micropip", "html5lib": "html5lib", "jinja2": "Jinja2", "setuptools": "setuptools", "easy_install": "setuptools", "pkg_resources": "setuptools", "markupsafe": "MarkupSafe", "soupsieve": "soupsieve", "pygments": "Pygments"}}
+
   Module.locateFile = (path) => baseURL + path;
   var postRunPromise = new Promise((resolve, reject) => {
     Module.postRun = () => {
@@ -350,7 +354,8 @@ languagePluginLoader = new Promise((resolve, reject) => {
             self.pyodide.globals =
                 self.pyodide.runPython('import sys\nsys.modules["__main__"]');
             self.pyodide = makePublicAPI(self.pyodide, PUBLIC_API);
-            self.pyodide._module.packages = json;
+            /** UPDATE */
+            self.pyodide._module.packages = packageJson;
             resolve();
           })
           .catch(e => console.log(e.stack));

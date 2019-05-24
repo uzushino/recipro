@@ -35,10 +35,13 @@ const fizzbuzz = `
       else:
         print(i)
 `;
-languagePluginLoader.then(() => {
-  console.log(pyodide.runPython(fizzbuzz));
-})
-.catch(e => console.log(e.stack));
+
+async function __main__() {
+  await languagePluginLoader;
+  pyodide.runPython(fizzbuzz);
+}
+
+__main__();
 "#)?;
 
     Ok(())

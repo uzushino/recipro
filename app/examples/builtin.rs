@@ -31,10 +31,11 @@ acc = itertools.accumulate([1,2,3,4,5,6,7,8,9,10])
 print(list(acc))
 `;
 
-languagePluginLoader.then(() => {
-  console.log(pyodide.runPython(python));
-})
-.catch(e => console.log(e.stack));
+async function __main__() {
+  pyodide.runPython(python);
+}
+
+__main__();
 "#)?;
 
     Ok(())
