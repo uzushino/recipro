@@ -1,5 +1,4 @@
 var Module = Module
-
 Module.checkABI(1);
 if (!Module.expectedDataFileDownloads) {
     Module.expectedDataFileDownloads = 0;
