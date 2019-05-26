@@ -6,7 +6,7 @@
 
 using namespace recipro;
 
-void SetGlobalObject(v8::Isolate *isolate, v8::Local<v8::Context> context) {
+void SetGlobalObject(ReciproVM *vm, v8::Isolate *isolate, v8::Local<v8::Context> context) {
   v8::HandleScope handle_scope(isolate);
   v8::Context::Scope context_scope(context);
 
@@ -19,7 +19,8 @@ void SetGlobalObject(v8::Isolate *isolate, v8::Local<v8::Context> context) {
   );
   CHECK(result.FromJust());
 
-  auto log_tmpl = v8::FunctionTemplate::New(isolate, LogCallback);
+  auto self = v8::External::New(isolate, (void *)vm);
+  auto log_tmpl = v8::FunctionTemplate::New(isolate, LogCallback, self);
   auto log_val = log_tmpl->GetFunction(context).ToLocalChecked();
   result = global_val->Set(
     context,
@@ -28,7 +29,7 @@ void SetGlobalObject(v8::Isolate *isolate, v8::Local<v8::Context> context) {
   );
   CHECK(result.FromJust());
   
-  auto readfile_tmpl = v8::FunctionTemplate::New(isolate, ReadFileCallback);
+  auto readfile_tmpl = v8::FunctionTemplate::New(isolate, ReadFileCallback, self);
   auto readfile_val = readfile_tmpl->GetFunction(context).ToLocalChecked();
   result = global_val->Set(
     context,
@@ -37,7 +38,7 @@ void SetGlobalObject(v8::Isolate *isolate, v8::Local<v8::Context> context) {
   );
   CHECK(result.FromJust());
   
-  auto runscript_tmpl = v8::FunctionTemplate::New(isolate, RunScriptCallback);
+  auto runscript_tmpl = v8::FunctionTemplate::New(isolate, RunScriptCallback, self);
   auto runscript_val = runscript_tmpl->GetFunction(context).ToLocalChecked();
   result = global_val->Set(
     context,
@@ -58,7 +59,7 @@ ReciproVM* init_recipro_core(recipro::SnapshotData snapshot) {
 
     vm->isolate_->Reset(context);
 
-    SetGlobalObject(isolate, context);
+    SetGlobalObject(vm, isolate, context);
   });
 
   return vm;
@@ -76,7 +77,7 @@ ReciproVM* init_recipro_snapshot() {
     vm->isolate_->Reset(context);
     vm->isolate_->DefaultContext(context);
     
-    SetGlobalObject(isolate, context);
+    SetGlobalObject(vm, isolate, context);
   });
 
   return vm;

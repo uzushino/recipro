@@ -8,6 +8,7 @@ extern "C" {
 #endif
   typedef struct {
     std::shared_ptr<recipro::Isolate> isolate_;
+    std::map<std::string, std::string> ccache_;
   } ReciproVM;
 
   ReciproVM* init_recipro_core(recipro::SnapshotData); // construct

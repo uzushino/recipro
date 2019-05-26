@@ -11,6 +11,7 @@
 #include "src/base/logging.h"
 #include "src/utils.h"
 
+#include "recipro.h"
 #include "isolate.h"
 #include "binding.h"
 
@@ -30,6 +31,9 @@ void recipro::LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
 void recipro::ReadFileCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
   if (args.Length() < 1) return;
+  
+  v8::Local<v8::External> ext = args.Data().As<v8::External>();
+  ReciproVM* self = static_cast<ReciproVM *>(ext->Value());
 
   v8::Isolate* isolate = args.GetIsolate();
   v8::HandleScope scope(isolate);
@@ -37,8 +41,18 @@ void recipro::ReadFileCallback(const v8::FunctionCallbackInfo<v8::Value>& args) 
   v8::Local<v8::Value> arg = args[0];
   v8::String::Utf8Value value(isolate, arg);
 
+  std::map<std::string, std::string>::iterator it = 
+    self->ccache_.find(*value);
+
   bool exists;
-  std::string source = v8::internal::ReadFile(*value, &exists);
+  std::string source;
+  if (it != self->ccache_.end()) {
+    source = it->second;
+    exists = true;
+  } else {
+    source = v8::internal::ReadFile(*value, &exists);
+    self->ccache_.insert(std::make_pair(*value, source));
+  }
 
   if (exists) {
     v8::Local<v8::ArrayBuffer> ab = 
