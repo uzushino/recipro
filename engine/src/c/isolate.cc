@@ -65,6 +65,9 @@ void recipro::ReadFileCallback(const v8::FunctionCallbackInfo<v8::Value>& args) 
 void recipro::RunScriptCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
   if (args.Length() < 1) return;
 
+  v8::Local<v8::External> ext = args.Data().As<v8::External>();
+  ReciproVM* self = static_cast<ReciproVM *>(ext->Value());
+
   v8::Isolate* isolate = args.GetIsolate();
   v8::HandleScope scope(isolate);
   auto context = isolate->GetCurrentContext();
@@ -73,12 +76,22 @@ void recipro::RunScriptCallback(const v8::FunctionCallbackInfo<v8::Value>& args)
   v8::Local<v8::Value> arg = args[0];
   v8::String::Utf8Value value(isolate, arg);
 
+  std::map<std::string, std::string>::iterator it = 
+    self->ccache_.find(*value);
+
   bool exists;
-  std::string file = v8::internal::ReadFile(*value, &exists);
+  std::string buffer;
+  if (it != self->ccache_.end()) {
+    buffer = it->second;
+    exists = true;
+  } else {
+    buffer = v8::internal::ReadFile(*value, &exists);
+    self->ccache_.insert(std::make_pair(*value, buffer));
+  }
 
   if (exists) {
     auto source =
-        v8::String::NewFromUtf8(isolate, file.c_str(), v8::NewStringType::kNormal).ToLocalChecked(); 
+        v8::String::NewFromUtf8(isolate, buffer.c_str(), v8::NewStringType::kNormal).ToLocalChecked(); 
 
     v8::TryCatch trycatch(isolate);
     auto script = v8::Script::Compile(context, source).ToLocalChecked();
