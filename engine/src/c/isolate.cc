@@ -29,6 +29,22 @@ void recipro::LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
   printf("%s\n", *value);
 }
 
+std::string ReadFileWithCache(ReciproVM *vm, const char *filename, bool *exists) {
+  std::map<std::string, std::string>::iterator it = 
+    vm->ccache_.find(filename);
+
+  std::string source;
+  if (it != vm->ccache_.end()) {
+    source = it->second;
+    *exists = true;
+  } else {
+    source = v8::internal::ReadFile(filename, exists);
+    vm->ccache_.insert(std::make_pair(filename, source));
+  }
+
+  return source;
+}
+
 void recipro::ReadFileCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
   if (args.Length() < 1) return;
   
@@ -41,22 +57,18 @@ void recipro::ReadFileCallback(const v8::FunctionCallbackInfo<v8::Value>& args) 
   v8::Local<v8::Value> arg = args[0];
   v8::String::Utf8Value value(isolate, arg);
 
-  std::map<std::string, std::string>::iterator it = 
-    self->ccache_.find(*value);
-
-  bool exists;
-  std::string source;
-  if (it != self->ccache_.end()) {
-    source = it->second;
-    exists = true;
+  bool exists = false;
+  std::string buffer;
+  if (self) {
+    buffer = ReadFileWithCache(self, *value, &exists);
   } else {
-    source = v8::internal::ReadFile(*value, &exists);
-    self->ccache_.insert(std::make_pair(*value, source));
+    buffer = v8::internal::ReadFile(*value, &exists);
+    exists = true;
   }
 
   if (exists) {
     v8::Local<v8::ArrayBuffer> ab = 
-      v8::ArrayBuffer::New(isolate, (void *)source.c_str(), source.length());
+      v8::ArrayBuffer::New(isolate, (void *)buffer.c_str(), buffer.length());
 
     args.GetReturnValue().Set(ab);
   }
@@ -75,18 +87,14 @@ void recipro::RunScriptCallback(const v8::FunctionCallbackInfo<v8::Value>& args)
 
   v8::Local<v8::Value> arg = args[0];
   v8::String::Utf8Value value(isolate, arg);
-
-  std::map<std::string, std::string>::iterator it = 
-    self->ccache_.find(*value);
-
-  bool exists;
+  
+  bool exists = false;
   std::string buffer;
-  if (it != self->ccache_.end()) {
-    buffer = it->second;
-    exists = true;
+  if (self) {
+    buffer = ReadFileWithCache(self, *value, &exists);
   } else {
     buffer = v8::internal::ReadFile(*value, &exists);
-    self->ccache_.insert(std::make_pair(*value, buffer));
+    exists = true;
   }
 
   if (exists) {
