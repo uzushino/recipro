@@ -8,6 +8,9 @@ edition = "2018"
 recipro_engine = { path = "../engine" }
 cc = "1.0"
 failure = "*"
+tokio = "*"
+futures = "*"
+futures-core = "*"
 
 [[bin]] 
 name = "recipro"

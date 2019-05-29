@@ -1,7 +1,4 @@
-extern crate failure;
-extern crate libc;
-
-use std::rc::Rc;
+use std::sync::Arc;
 use std::cell::RefCell;
 use std::ffi::CString;
 use std::os::raw::c_char;
@@ -19,10 +16,10 @@ extern "C" {
 pub enum ReciproVM {}
 
 pub struct Platform {
-    engines: ManuallyDrop<Vec<Rc<Engine>>>,
+    engines: ManuallyDrop<Vec<Arc<Engine>>>,
 }
 
-pub trait Engine {
+pub trait Engine : Sync + Send {
     fn new() -> Self where Self: Sized;
     fn core(&self) -> *mut ReciproVM;
     fn init(&self);
@@ -46,6 +43,12 @@ pub struct Isolate<'a> {
     vm: RefCell<*mut ReciproVM>,
 }
 
+unsafe impl<'a> Send for Isolate<'a> {}
+unsafe impl<'a> Sync for Isolate<'a> {}
+
 pub struct Snapshot {
     vm: RefCell<*mut ReciproVM>,
 }
+
+unsafe impl Send for Snapshot {}
+unsafe impl Sync for Snapshot {}

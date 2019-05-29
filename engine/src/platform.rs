@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 use std::mem::ManuallyDrop;
 use std::borrow::Cow;
 use std::ffi::CStr;
@@ -33,7 +33,7 @@ impl<'a> Platform {
         }
     }
 
-    pub fn add_engine(&mut self, engine: Rc<Engine>)  {
+    pub fn add_engine(&mut self, engine: Arc<Engine>)  {
         engine.init();
         self.engines.push(engine);
     }

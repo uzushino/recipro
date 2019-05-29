@@ -1,10 +1,10 @@
 use std::env;
-use std::rc::Rc;
+use std::sync::Arc;
 use recipro_engine::{ Engine, Isolate, Platform };
 
 fn main() -> Result<(), failure::Error> {
     let mut platform: Platform = Platform::new();
-    let engine = Rc::new(Isolate::new());
+    let engine = Arc::new(Isolate::new());
     platform.add_engine(engine.clone());
     
     let scripts_dir = env::current_dir()?
