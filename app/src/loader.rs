@@ -1,27 +1,32 @@
 use std::env;
-use std::sync::Arc;
+use std::sync::{ Arc, Mutex };
 
 use futures::{
   Future,
   Async,
-  Poll
+  Poll,
+
+  task
 };
 
 use recipro_engine::{ Engine, Isolate, Platform };
 
-pub struct PyodideApp {
-  platform: Platform,
+pub struct Loader {
+  platform: Arc<Mutex<Platform>>,
+  loading: bool,
 }
 
-impl PyodideApp {
-  pub fn new() -> PyodideApp {
-    PyodideApp {
-      platform: Platform::new()
+impl Loader {
+  pub fn new() -> Loader {
+    Loader {
+      platform: Arc::new(Mutex::new(Platform::new())),
+      loading: false
     }
   }
-
-  fn prepare(platform: &mut Platform) -> Result<(), failure::Error> {
+  
+  fn prepare(platform: &mut Platform, task: task::Task) -> Result<(), failure::Error> {
       let engine = Arc::new(Isolate::new());
+
       platform.add_engine(engine.clone());
       
       let scripts_dir = env::current_dir()?
@@ -38,35 +43,31 @@ impl PyodideApp {
       let s = std::fs::read_to_string(pyodide_dir.join("pyodide.js"))?;
       engine.execute_script(s.as_str())?;
 
+      task.notify();
+
       Ok(())
   }
 }
 
-impl Future for PyodideApp {
-  type Item = ();
-  type Error = failure::Error;
-
-  fn poll<'a>(&'a mut self) -> Poll<Self::Item, Self::Error> {
-    match Self::prepare(&mut self.platform) {
-      Ok(_) => Ok(Async::Ready(())),
-      Err(_) => Err(failure::err_msg("")),
-    }
-  }
-}
-
-pub struct Loader<T>(pub T);
-
-impl<T> Future for Loader<T> where T: Future {
+impl Future for Loader {
   type Item = ();
 
   type Error = ();
 
-  fn poll<'a>(&'a mut self) -> Poll<Self::Item, Self::Error> {
-    match self.0.poll() {
-      Ok(Async::Ready(_)) => {},
-      Ok(Async::NotReady) => return Ok(Async::NotReady),
-      Err(_) => return Err(()),
-    }
+  fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+    if !self.loading {
+      let shared = self.platform.clone();
+      let current = task::current();
+
+      std::thread::spawn(move || {
+        let mut platform = shared.lock().unwrap();
+        Self::prepare(&mut platform, current).unwrap();
+      });
+
+      self.loading = true;
+
+      return Ok(Async::NotReady);
+    } 
 
     Ok(Async::Ready(()))
   }

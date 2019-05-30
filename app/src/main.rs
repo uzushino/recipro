@@ -2,9 +2,10 @@ use tokio;
 
 mod loader;
 
-use loader::{ Loader, PyodideApp };
+use loader::Loader;
 
 fn main()  {
-    let server = Loader(PyodideApp::new());
+    let server = Loader::new();
+    
     tokio::run(server);
 }
