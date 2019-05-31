@@ -16,7 +16,7 @@ extern "C" {
 pub enum ReciproVM {}
 
 pub struct Platform {
-    engines: ManuallyDrop<Vec<Arc<Engine>>>,
+    pub engines: ManuallyDrop<Vec<Arc<Engine>>>,
 }
 
 pub trait Engine : Sync + Send {

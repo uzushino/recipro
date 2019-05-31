@@ -12,22 +12,19 @@ use futures::{
 use recipro_engine::{ Engine, Isolate, Platform };
 
 pub struct Loader {
-  platform: Arc<Mutex<Platform>>,
-  loading: bool,
+  platform: Platform,
 }
 
 impl Loader {
   pub fn new() -> Loader {
     Loader {
-      platform: Arc::new(Mutex::new(Platform::new())),
-      loading: false
+      platform: Platform::new(),
     }
   }
   
-  fn prepare(platform: &mut Platform, task: task::Task) -> Result<(), failure::Error> {
+  fn prepare(&mut self) -> Result<(), failure::Error> {
       let engine = Arc::new(Isolate::new());
-
-      platform.add_engine(engine.clone());
+      self.platform.add_engine(engine.clone());
       
       let scripts_dir = env::current_dir()?
           .join("scripts");
@@ -43,9 +40,16 @@ impl Loader {
       let s = std::fs::read_to_string(pyodide_dir.join("pyodide.js"))?;
       engine.execute_script(s.as_str())?;
 
-      task.notify();
-
       Ok(())
+  }
+
+  fn execute_python(&self, python: &str) -> Result<(), failure::Error> {
+    let engine = self.platform.engines[0].clone();
+
+    engine.execute_script(format!("(async function() {{
+      await languagePluginLoader;
+      pyodide.runPython(`{py}`)
+    }})()", py = python).as_str())
   }
 }
 
@@ -55,20 +59,7 @@ impl Future for Loader {
   type Error = ();
 
   fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-    if !self.loading {
-      let shared = self.platform.clone();
-      let current = task::current();
-
-      std::thread::spawn(move || {
-        let mut platform = shared.lock().unwrap();
-        Self::prepare(&mut platform, current).unwrap();
-      });
-
-      self.loading = true;
-
-      return Ok(Async::NotReady);
-    } 
-
+    self.prepare().unwrap();
     Ok(Async::Ready(()))
   }
 }
