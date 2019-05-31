@@ -1,12 +1,10 @@
 use std::env;
-use std::sync::{ Arc, Mutex };
+use std::sync::Arc;
 
 use futures::{
   Future,
   Async,
   Poll,
-
-  task
 };
 
 use recipro_engine::{ Engine, Isolate, Platform };
