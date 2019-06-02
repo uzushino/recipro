@@ -35,19 +35,16 @@ impl Loader {
       let s = format!("self.languagePluginUrl = '{}/';",  pyodide_dir.to_string_lossy());
       engine.execute_script(s.as_str())?;
 
-      let s = std::fs::read_to_string(pyodide_dir.join("pyodide.js"))?;
+      let s = std::fs::read_to_string(pyodide_dir.join("pyodide.sync.js"))?;
       engine.execute_script(s.as_str())?;
+      engine.execute_script("languagePluginLoader()")?;
 
       Ok(())
   }
 
   fn execute_python(&self, python: &str) -> Result<(), failure::Error> {
     let engine = self.platform.engines[0].clone();
-
-    engine.execute_script(format!("(async function() {{
-      await languagePluginLoader;
-      pyodide.runPython(`{py}`)
-    }})()", py = python).as_str())
+    engine.execute_script(format!("pyodide.runPython(`{py}`)", py = python).as_str())
   }
 }
 
