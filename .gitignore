@@ -1,4 +1,2 @@
 /target
 .vscode
-scripts/pyodide
-!scripts/pyodide/.keep
